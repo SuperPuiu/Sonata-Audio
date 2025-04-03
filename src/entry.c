@@ -24,7 +24,7 @@ int main(int argc, char **argv) {
   Context->text_height = TextHeight;
 
   while (Running) {
-    UpdateSongPosition();
+    UpdateAudioPosition();
     SDL_Event Event;
 
     while(SDL_PollEvent(&Event)) {
@@ -81,4 +81,6 @@ int main(int argc, char **argv) {
 
   free(Context);
   SDL_Quit();
+
+  return 0;
 }

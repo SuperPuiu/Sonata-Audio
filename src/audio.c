@@ -1,5 +1,4 @@
 #include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
 
 #ifndef WINDOWS
@@ -18,8 +17,8 @@ static SDL_AudioSpec Specifications = {
   .channels = MIX_DEFAULT_CHANNELS
 };
 
-char SongTitles[PAP_MAX_SONGS][256];
-char Songs[PAP_MAX_SONGS][PATH_MAX];
+AudioData Audio[PAP_MAX_AUDIO];
+
 char *CurrentPath;
 
 int CurrentIndex;
@@ -27,7 +26,7 @@ int AudioVolume = MIX_MAX_VOLUME;
 
 static Mix_Music *Music;
 
-double MusicDuration, CurrentPosition;
+double AudioDuration, AudioPosition;
 static double LoopStart, LoopEnd, LoopLength;
 
 const char *TagTitle = NULL;
@@ -36,8 +35,8 @@ const char *TagAlbum = NULL;
 const char *TagCopyright = NULL;
 
 void InitializeAudio() {
-  CurrentPosition = 0;
-  MusicDuration = 0;
+  AudioPosition = 0;
+  AudioDuration = 0;
 
   if (!Mix_OpenAudio(0, &Specifications)) {
     SDL_Log("Couldn't open audio %s\n", SDL_GetError());
@@ -46,46 +45,46 @@ void InitializeAudio() {
     Mix_QuerySpec(&Specifications.freq, &Specifications.format, &Specifications.channels);
   }
   
-  for (int i = 0; i < PAP_MAX_SONGS; i++)
-    memset(Songs[i], 0, PATH_MAX);
+  for (int i = 0; i < PAP_MAX_AUDIO; i++)
+    memset(Audio[i].Path, 0, PATH_MAX);
   
   Mix_VolumeMusic(AudioVolume);
 }
 
 int GetEmptyIndex() {
-  for (int i = 0; i < PAP_MAX_SONGS; i++)
-    if (Songs[i][0] == 0)
+  for (int i = 0; i < PAP_MAX_AUDIO; i++)
+    if (Audio[i].Path[0] == 0)
       return i;
   return -1;
 }
 
 int GetNextIndex(int Index) {
-  if (Index > PAP_MAX_SONGS || Index + 1 > PAP_MAX_SONGS)
+  if (Index > PAP_MAX_AUDIO || Index + 1 > PAP_MAX_AUDIO)
     return 0;
 
-  if (Songs[Index + 1][0] == 0)
+  if (Audio[Index + 1].Path[0] == 0)
     return 0;
   else
     return Index + 1;
 }
 
-int GetSongIndex(char *Path) {
+int GetAudioIndex(char *Path) {
   if (Path == NULL)
     return -1;
 
-  for (int i = 0; i < PAP_MAX_SONGS; i++) {
-    if (Songs[i][0] == 0)
+  for (int i = 0; i < PAP_MAX_AUDIO; i++) {
+    if (Audio[i].Path[0] == 0)
       continue;
 
-    if (strcmp(Songs[i], Path) == 0)
+    if (strcmp(Audio[i].Path, Path) == 0)
       return i;
   }
 
   return -1;
 }
 
-int AddSong(char *Path) {
-  if (GetSongIndex(Path) != -1)
+int AddAudio(char *Path) {
+  if (GetAudioIndex(Path) != -1)
     return -1;
 
   int Index = GetEmptyIndex();
@@ -123,33 +122,33 @@ int AddSong(char *Path) {
     memcpy(LocalTagTitle, LastPathPointer, strlen(LastPathPointer));
   }
 
-  memcpy(SongTitles[Index], LocalTagTitle, strlen(LocalTagTitle));
-  memcpy(Songs[Index], Path, strlen(Path));
+  memcpy(Audio[Index].Title, LocalTagTitle, strlen(LocalTagTitle));
+  memcpy(Audio[Index].Path, Path, strlen(Path));
 
   Mix_FreeMusic(Music);
   return Index;
 }
 
-void UpdateSongPosition() {
+void UpdateAudioPosition() {
   if (Mix_PlayingMusic())
-    CurrentPosition = Mix_GetMusicPosition(Music);
+    AudioPosition = Mix_GetMusicPosition(Music);
 
   if (!Mix_PlayingMusic()) {
     if (LoopStatus == LOOP_SONG) {
-      if (GetSongIndex(CurrentPath) != -1)
+      if (GetAudioIndex(CurrentPath) != -1)
         PlayAudio(CurrentPath);
     } else if (LoopStatus == LOOP_ALL) {
-      if (GetSongIndex(CurrentPath) != -1)
-        PlayAudio(Songs[GetNextIndex(CurrentIndex)]);
+      if (GetAudioIndex(CurrentPath) != -1)
+        PlayAudio(Audio[GetNextIndex(CurrentIndex)].Path);
     }
   }
 }
 
 double PlayAudio(char *Path) {
-  int Index = GetSongIndex(Path);
+  int Index = GetAudioIndex(Path);
 
   if (Index == -1)
-    Index = AddSong(Path);
+    Index = AddAudio(Path);
   
   if (Music != NULL) {
     Mix_FreeMusic(Music);
@@ -162,8 +161,8 @@ double PlayAudio(char *Path) {
     CurrentIndex = Index;
     CurrentPath = Path;
 
-    MusicDuration = Mix_MusicDuration(Music);
-    CurrentPosition = 0;
+    AudioDuration = Mix_MusicDuration(Music);
+    AudioPosition = 0;
     AudioPosition = 0;
 
     TagTitle = Mix_GetMusicTitle(Music);
@@ -176,7 +175,6 @@ double PlayAudio(char *Path) {
     LoopLength = Mix_GetMusicLoopLengthTime(Music);
     
     Mix_FadeInMusic(Music, false, 1000);
-    printf("New index: %i Path: %s Duration: %f Position: %f\n", Index, Path, MusicDuration, CurrentPosition);
     return LoopLength;
   }
 

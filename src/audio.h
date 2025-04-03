@@ -1,7 +1,7 @@
 #ifndef __PAPAUDIO__
 #define __PAPAUDIO__
 
-#define PAP_MAX_SONGS 256
+#define PAP_MAX_AUDIO 256
 
 #ifndef WINDOWS
 #include <linux/limits.h>
@@ -9,18 +9,22 @@
 #include <windows.h>
 #endif
 
-extern double MusicDuration, CurrentPosition;
+typedef struct {
+  char Title[256];
+  char Path[PATH_MAX];
+} AudioData;
+
+extern AudioData Audio[];
+extern double AudioDuration, AudioPosition;
 extern int AudioVolume;
-extern char SongTitles[PAP_MAX_SONGS][256];
-extern char Songs[PAP_MAX_SONGS][PATH_MAX];
 extern const char *TitleTag;
 extern const char *AlbumTag;
 extern const char *TagArtist;
 extern const char *TagCopyright;
 
-void UpdateSongPosition();
+void UpdateAudioPosition();
 void InitializeAudio();
-int AddSong(char *Path);
+int AddAudio(char *Path);
 double PlayAudio(char *Path);
 
 #endif

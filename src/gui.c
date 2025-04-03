@@ -17,13 +17,13 @@
 float Background[3] = { 44, 44, 44 };
 
 int LoopStatus = LOOP_NONE;
-static int PlaylistWidths[PAP_MAX_SONGS];
+static int PlaylistWidths[PAP_MAX_AUDIO];
 static int TitleOpt = MU_OPT_NORESIZE | MU_OPT_NOSCROLL | MU_OPT_NOCLOSE | MU_OPT_NOINTERACT;
 static int BelowOpt = MU_OPT_NORESIZE | MU_OPT_NOSCROLL | MU_OPT_NOCLOSE | MU_OPT_NOTITLE | MU_OPT_NOFRAME;
 static int PlaylistOpt = MU_OPT_NOCLOSE | MU_OPT_NOTITLE;
 static int ExtraOpt = MU_OPT_NOCLOSE | MU_OPT_NOTITLE | MU_OPT_NOFRAME | MU_OPT_NOSCROLL;
 
-float AudioPosition;
+float l_AudioPosition;
 static float AudioFloat = MIX_MAX_VOLUME;
 
 static mu_Rect PAP_Title;
@@ -44,7 +44,7 @@ int TextHeight(mu_Font font) {
 }
 
 void InitializeGUI() {
-  for (int i = 0; i < PAP_MAX_SONGS; i++)
+  for (int i = 0; i < PAP_MAX_AUDIO; i++)
     PlaylistWidths[i] = PLAYLIST_WIDTH - 25;
   
   PAP_Title = mu_rect(0, 0, WINDOW_WIDTH, 20);
@@ -95,7 +95,7 @@ void MainWindow(mu_Context *Context) {
             }
 
             if (S_ISREG(Stats.st_mode) != 0)
-              AddSong(FullPath);
+              AddAudio(FullPath);
           }
 
           closedir(Directory);
@@ -110,19 +110,19 @@ void MainWindow(mu_Context *Context) {
       const char *Path = OpenDialogue(PFD_FILE);
 
       if (Path)
-        AddSong((char *)Path);
+        AddAudio((char *)Path);
       else
         SDL_Log("Path is NULL.\n");
     }
     
     mu_layout_set_next(Context, mu_rect(WINDOW_WIDTH / 2 - 150, 0, 300, 25), 1);
-    if (mu_slider_ex(Context, &AudioPosition, 0, MusicDuration, 0, MU_SLIDER_FMT, MU_OPT_ALIGNCENTER)) {
+    if (mu_slider_ex(Context, &l_AudioPosition, 0, AudioDuration, 0, MU_SLIDER_FMT, MU_OPT_ALIGNCENTER)) {
       // Mix_PauseMusic();
-      CurrentPosition = (double)AudioPosition;
-      Mix_SetMusicPosition(CurrentPosition);
+      AudioPosition = (double)l_AudioPosition;
+      Mix_SetMusicPosition(AudioPosition);
     }
 
-    AudioPosition = (float)CurrentPosition;
+    l_AudioPosition = (float)AudioPosition;
     
     mu_layout_set_next(Context, mu_rect(WINDOW_WIDTH - 110, 0, 100, 25), 1);
     if (mu_slider_ex(Context, &AudioFloat, 0, 128, 0, MU_SLIDER_FMT, MU_OPT_ALIGNCENTER)) {
@@ -135,14 +135,14 @@ void MainWindow(mu_Context *Context) {
   
   /* Playlist */
   if (mu_begin_window_ex(Context, "Playlist", PAP_Playlist, PlaylistOpt)) {
-    for (int i = 0; i < PAP_MAX_SONGS; i++) {
-      if (Songs[i][0] == 0)
+    for (int i = 0; i < PAP_MAX_AUDIO; i++) {
+      if (Audio[i].Path[0] == 0)
         continue;
       
       mu_layout_row(Context, 0, NULL, 25);
       mu_layout_width(Context, PLAYLIST_WIDTH - 25);
-      if (mu_button(Context, SongTitles[i]))
-        PlayAudio(Songs[i]);
+      if (mu_button(Context, Audio[i].Title))
+        PlayAudio(Audio[i].Path);
     }
     
     mu_end_window(Context);
