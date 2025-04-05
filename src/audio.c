@@ -88,15 +88,15 @@ int AddAudio(char *Path) {
     return -1;
 
   int Index = GetEmptyIndex();
-  Mix_Music *Music;
+  Mix_Music *l_Music;
   char LocalTagTitle[256];
 
   if (Index == -1)
     return -1;
 
-  Music = Mix_LoadMUS(Path);
+  l_Music = Mix_LoadMUS(Path);
 
-  if (!Music) {
+  if (!l_Music) {
     SDL_Log("Failed to load %s: %s", Path, SDL_GetError());
     return -1;
   }
@@ -125,7 +125,7 @@ int AddAudio(char *Path) {
   memcpy(Audio[Index].Title, LocalTagTitle, strlen(LocalTagTitle));
   memcpy(Audio[Index].Path, Path, strlen(Path));
 
-  Mix_FreeMusic(Music);
+  Mix_FreeMusic(l_Music);
   return Index;
 }
 
@@ -174,7 +174,7 @@ double PlayAudio(char *Path) {
     LoopEnd = Mix_GetMusicLoopEndTime(Music);
     LoopLength = Mix_GetMusicLoopLengthTime(Music);
     
-    Mix_FadeInMusic(Music, false, 1000);
+    Mix_FadeInMusic(Music, false, 0);
     return LoopLength;
   }
 
