@@ -14,8 +14,6 @@
 
 #include <string.h>
 
-float Background[3] = { 44, 44, 44 };
-
 int LoopStatus = LOOP_NONE;
 static int PlaylistWidths[PAP_MAX_AUDIO];
 static int TitleOpt = MU_OPT_NORESIZE | MU_OPT_NOSCROLL | MU_OPT_NOCLOSE | MU_OPT_NOINTERACT;

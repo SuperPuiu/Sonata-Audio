@@ -14,8 +14,6 @@ enum LoopEnum {
   LOOP_ALL
 };
 
-extern float Background[3];
-
 extern int LoopStatus;
 
 int TextWidth(mu_Font font, const char *text, int len);
