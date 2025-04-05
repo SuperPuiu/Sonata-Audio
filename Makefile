@@ -7,14 +7,14 @@ buildTest:
 
 buildLinux:
 	mkdir -p bin
-	gcc $(SOURCES) microui.c $(CFLAGS) -o3 -lX11 -o bin/test
+	gcc $(SOURCES) microui.c $(CFLAGS) -o3 -lX11 -o bin/PuiusAudioPlayer_Linux
 
 windows:
-	x86_64-w64-mingw32-gcc -D WINDOWS="" $(SOURCES) microui.c $(CFLAGS) -lcomdlg32 -lgdi32 -o3 -o bin/windows_test.exe
+	x86_64-w64-mingw32-gcc -D WINDOWS="" $(SOURCES) microui.c $(CFLAGS) -lcomdlg32 -lgdi32 -o3 -o bin/PuiusAudioPlayer_Windows.exe
 
 run:
-	./bin/test
+	./bin/PuiusAudioPlayer_Linux
 
 clean:
-	rm bin/test
-	rm bin/windows_text.exe
+	rm bin/PuiusAudioPlayer_Linux
+	rm bin/PuiusAudioPlayer_Windows
