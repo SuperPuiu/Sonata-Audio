@@ -64,8 +64,8 @@ int main(int argc, char **argv) {
     ProcessContextFrame(Context);
 
     /* render */
-    r_clear(mu_color(Background[0], Background[1], Background[2], 255));
-    
+    r_clear();
+
     mu_Command *cmd = NULL;
     while (mu_next_command(Context, &cmd)) {
       switch (cmd->type) {
@@ -77,6 +77,8 @@ int main(int argc, char **argv) {
     }
 
     r_present();
+
+    SDL_Delay(1000 / 45);
   }
 
   free(Context);

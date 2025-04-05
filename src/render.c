@@ -1,171 +1,170 @@
 #include <SDL3/SDL.h>
-#include <SDL3/SDL_opengl.h>
 #include <assert.h>
+
+#include <stdint.h>
+
 #include "render.h"
 #include "atlas.inl"
 
-#define BUFFER_SIZE 16384
+#include "window.h"
 
-static GLfloat   tex_buf[BUFFER_SIZE *  8];
-static GLfloat  vert_buf[BUFFER_SIZE *  8];
-static GLubyte color_buf[BUFFER_SIZE * 16];
-static GLuint  index_buf[BUFFER_SIZE *  6];
+#define BUFFER_SIZE 512
 
-static int buf_idx;
+static uint32_t Background;
 
-static SDL_Window *window;
+static mu_Rect Clip;
+static mu_Rect TextureBuffer[BUFFER_SIZE];
+static mu_Rect SourceBuffer[BUFFER_SIZE];
+static mu_Color ColorBuffer[BUFFER_SIZE]; 
 
-void r_init(void) {
-  /* init SDL window */
-  window = SDL_CreateWindow(
-    NULL, WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_OPENGL);
-  SDL_GL_CreateContext(window);
+static unsigned int BufferIndex = 0;
 
-  /* init gl */
-  glEnable(GL_BLEND);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-  glDisable(GL_CULL_FACE);
-  glDisable(GL_DEPTH_TEST);
-  glEnable(GL_SCISSOR_TEST);
-  glEnable(GL_TEXTURE_2D);
-  glEnableClientState(GL_VERTEX_ARRAY);
-  glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-  glEnableClientState(GL_COLOR_ARRAY);
-
-  /* init texture */
-  GLuint id;
-  glGenTextures(1, &id);
-  glBindTexture(GL_TEXTURE_2D, id);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, ATLAS_WIDTH, ATLAS_HEIGHT, 0,
-    GL_ALPHA, GL_UNSIGNED_BYTE, atlas_texture);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  assert(glGetError() == 0);
+static inline uint32_t ColorToNumber(mu_Color Color) {
+  return ((uint32_t)Color.a << 24) | ((uint32_t)Color.r << 16) | ((uint32_t)Color.g << 8) | Color.b;
 }
 
-static void flush(void) {
-  if (buf_idx == 0) { return; }
-
-  glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
-  glMatrixMode(GL_PROJECTION);
-  glPushMatrix();
-  glLoadIdentity();
-  glOrtho(0.0f, WINDOW_WIDTH, WINDOW_HEIGHT, 0.0f, -1.0f, +1.0f);
-  glMatrixMode(GL_MODELVIEW);
-  glPushMatrix();
-  glLoadIdentity();
-
-  glTexCoordPointer(2, GL_FLOAT, 0, tex_buf);
-  glVertexPointer(2, GL_FLOAT, 0, vert_buf);
-  glColorPointer(4, GL_UNSIGNED_BYTE, 0, color_buf);
-  glDrawElements(GL_TRIANGLES, buf_idx * 6, GL_UNSIGNED_INT, index_buf);
-
-  glMatrixMode(GL_MODELVIEW);
-  glPopMatrix();
-  glMatrixMode(GL_PROJECTION);
-  glPopMatrix();
-
-  buf_idx = 0;
+static inline mu_Color NumberToColor(uint32_t Color) {
+  return mu_color((Color >> 16) & 0xff, (Color >> 8) & 0xff, Color & 0xff, (Color >> 24) & 0xff);
 }
 
-static void push_quad(mu_Rect dst, mu_Rect src, mu_Color color) {
-  if (buf_idx == BUFFER_SIZE) { flush(); }
-
-  int texvert_idx = buf_idx *  8;
-  int   color_idx = buf_idx * 16;
-  int element_idx = buf_idx *  4;
-  int   index_idx = buf_idx *  6;
-  buf_idx++;
-
-  /* update texture buffer */
-  float x = src.x / (float) ATLAS_WIDTH;
-  float y = src.y / (float) ATLAS_HEIGHT;
-  float w = src.w / (float) ATLAS_WIDTH;
-  float h = src.h / (float) ATLAS_HEIGHT;
-  tex_buf[texvert_idx + 0] = x;
-  tex_buf[texvert_idx + 1] = y;
-  tex_buf[texvert_idx + 2] = x + w;
-  tex_buf[texvert_idx + 3] = y;
-  tex_buf[texvert_idx + 4] = x;
-  tex_buf[texvert_idx + 5] = y + h;
-  tex_buf[texvert_idx + 6] = x + w;
-  tex_buf[texvert_idx + 7] = y + h;
-
-  /* update vertex buffer */
-  vert_buf[texvert_idx + 0] = dst.x;
-  vert_buf[texvert_idx + 1] = dst.y;
-  vert_buf[texvert_idx + 2] = dst.x + dst.w;
-  vert_buf[texvert_idx + 3] = dst.y;
-  vert_buf[texvert_idx + 4] = dst.x;
-  vert_buf[texvert_idx + 5] = dst.y + dst.h;
-  vert_buf[texvert_idx + 6] = dst.x + dst.w;
-  vert_buf[texvert_idx + 7] = dst.y + dst.h;
-
-  /* update color buffer */
-  memcpy(color_buf + color_idx +  0, &color, 4);
-  memcpy(color_buf + color_idx +  4, &color, 4);
-  memcpy(color_buf + color_idx +  8, &color, 4);
-  memcpy(color_buf + color_idx + 12, &color, 4);
-
-  /* update index buffer */
-  index_buf[index_idx + 0] = element_idx + 0;
-  index_buf[index_idx + 1] = element_idx + 1;
-  index_buf[index_idx + 2] = element_idx + 2;
-  index_buf[index_idx + 3] = element_idx + 2;
-  index_buf[index_idx + 4] = element_idx + 3;
-  index_buf[index_idx + 5] = element_idx + 1;
+static inline bool InRectangle(mu_Rect Rect, int X, int Y) {
+  return (X >= Rect.x && X < Rect.x + Rect.w) && (Y >= Rect.y && Y < Rect.y + Rect.h);
 }
 
-void r_draw_rect(mu_Rect rect, mu_Color color) {
-  push_quad(rect, atlas[ATLAS_WHITE], color);
+static inline uint8_t GetAtlasColor(mu_Rect *Texture, int X, int Y) {
+  assert(X < Texture->w);
+  X += Texture->x;
+  assert(Y < Texture->h);
+  Y += Texture->y;
+  
+  return atlas_texture[Y * ATLAS_WIDTH + X];
 }
 
-void r_draw_text(const char *text, mu_Vec2 pos, mu_Color color) {
-  mu_Rect dst = { pos.x, pos.y, 0, 0 };
-  for (const char *p = text; *p; p++) {
-    if ((*p & 0xc0) == 0x80) { continue; }
-    int chr = mu_min((unsigned char) *p, 127);
-    mu_Rect src = atlas[ATLAS_FONT + chr];
-    dst.w = src.w;
-    dst.h = src.h;
-    push_quad(dst, src, color);
-    dst.x += dst.w;
+static inline mu_Color BlendPixel(mu_Color Destination, mu_Color Source) {
+  int ia = 0xff - Source.a;
+  Destination.r = ((Source.r * Source.a) + (Destination.r * ia)) >> 8;
+  Destination.g = ((Source.g * Source.a) + (Destination.g * ia)) >> 8;
+  Destination.b = ((Source.b * Source.a) + (Destination.b * ia)) >> 8;
+  return Destination;
+}
+
+void r_init() {
+  OpenWindow();
+  Background = ColorToNumber(mu_color(44, 44, 44, 255));
+  Clip = mu_rect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+}
+
+void FlushBuffers() {
+  for (unsigned int i = 0; i < BufferIndex; i++) {
+    mu_Rect *Source = &SourceBuffer[i];
+    mu_Rect *Texture = &TextureBuffer[i];
+
+    unsigned int Y = mu_max(Source->y, Clip.y);
+    unsigned int X = mu_max(Source->x, Clip.x);
+    unsigned int Width = mu_min(Source->x + Source->w, Clip.x + Clip.w);
+    unsigned int Height = mu_min(Source->y + Source->h, Clip.y + Clip.h);
+
+    for (unsigned int CurrentY = Y; CurrentY < Height; CurrentY++) {
+      for (unsigned int CurrentX = X; CurrentX < Width; CurrentX++) {
+        assert(InRectangle(*Source, CurrentX, CurrentY));
+        assert(InRectangle(Clip, CurrentX, CurrentY));
+        
+        /* Text */
+        if (Source->w == Texture->w && Source->h == Texture->h) {
+          uint8_t TextureColor = GetAtlasColor(Texture, CurrentX - Source->x, CurrentY - Source->y);
+          uint32_t CurrentPixel = PAP_GetPixel(CurrentX, CurrentY);
+          PAP_PutPixel(CurrentX, CurrentY, CurrentPixel | (int)ColorToNumber(mu_color(TextureColor, TextureColor, TextureColor, 255)));
+        /* Other */
+        } else {
+          mu_Color NewColor = BlendPixel(NumberToColor(PAP_GetPixel(CurrentX, CurrentY)), ColorBuffer[i]);
+          uint32_t PixelColor = ColorToNumber(NewColor);
+          PAP_PutPixel(CurrentX, CurrentY, PixelColor);
+        }
+
+      }
+    }
+  }
+  
+  BufferIndex = 0;
+}
+
+void PushRectangle(mu_Rect Source, mu_Rect Texture, mu_Color Color) {
+  if (BufferIndex == BUFFER_SIZE)
+    FlushBuffers();
+
+  TextureBuffer[BufferIndex] = Texture;
+  SourceBuffer[BufferIndex] = Source;
+  ColorBuffer[BufferIndex] = Color;
+
+  BufferIndex += 1;
+}
+
+void r_set_clip_rect(mu_Rect Rect) {
+  FlushBuffers();
+
+  unsigned int Y = mu_max(0, Rect.y);
+  unsigned int X = mu_max(0, Rect.x);
+  unsigned int Height = mu_min(WINDOW_HEIGHT, Rect.y + Rect.h) - Y;
+  unsigned int Width = mu_min(WINDOW_WIDTH, Rect.x + Rect.w) - X;
+
+  Clip = mu_rect(X, Y, Width, Height);
+}
+
+void r_draw_rect(mu_Rect Rect, mu_Color Color) {
+  PushRectangle(Rect, atlas[ATLAS_WHITE], Color);
+}
+
+void r_draw_text(const char *Text, mu_Vec2 Position, mu_Color Color) {
+  mu_Rect Destination = {Position.x, Position.y, 0, 0};
+  
+  for (const char *Pointer = Text; *Pointer; Pointer++) {
+    if ((*Pointer & 0xc0) == 0x80) 
+      continue;
+
+    int Character = mu_min((unsigned char) *Pointer, 127);
+    mu_Rect Source = atlas[ATLAS_FONT + Character];
+    Destination.w = Source.w;
+    Destination.h = Source.h;
+    
+    PushRectangle(Destination, Source, Color);
+
+    Destination.x += Destination.w;
   }
 }
 
-void r_draw_icon(int id, mu_Rect rect, mu_Color color) {
-  mu_Rect src = atlas[id];
-  int x = rect.x + (rect.w - src.w) / 2;
-  int y = rect.y + (rect.h - src.h) / 2;
-  push_quad(mu_rect(x, y, src.w, src.h), src, color);
+void r_draw_icon(int IconID, mu_Rect Rect, mu_Color Color) {
+  mu_Rect Source = atlas[IconID];
+
+  unsigned int X = Rect.x + (Rect.w - Source.w) / 2;
+  unsigned int Y = Rect.y + (Rect.h - Source.h) / 2;
+
+  PushRectangle(mu_rect(X, Y, Source.w, Source.h), Source, Color);
 }
 
-int r_get_text_width(const char *text, int len) {
-  int res = 0;
-  for (const char *p = text; *p && len--; p++) {
-    if ((*p & 0xc0) == 0x80) { continue; }
-    int chr = mu_min((unsigned char) *p, 127);
-    res += atlas[ATLAS_FONT + chr].w;
+int r_get_text_width(const char *Text, int Length) {
+  int Width = 0;
+  
+  for (const char *Pointer = Text; *Pointer && Length--; Pointer++) {
+    if ((*Pointer & 0xc0) == 0x80)
+      continue;
+
+    int Character = mu_min((unsigned char)*Pointer, 127);
+    Width += atlas[ATLAS_FONT + Character].w;
   }
-  return res;
+  
+  return Width;
 }
 
 int r_get_text_height(void) {
   return 18;
 }
 
-void r_set_clip_rect(mu_Rect rect) {
-  flush();
-  glScissor(rect.x, WINDOW_HEIGHT - (rect.y + rect.h), rect.w, rect.h);
-}
-
-void r_clear(mu_Color clr) {
-  flush();
-  glClearColor(clr.r / 255., clr.g / 255., clr.b / 255., clr.a / 255.);
-  glClear(GL_COLOR_BUFFER_BIT);
+void r_clear() {
+  FlushBuffers();
+  ClearWindow(Background);
 }
 
 void r_present(void) {
-  flush();
-  SDL_GL_SwapWindow(window);
+  FlushBuffers();
+  RefreshWindow();
 }
