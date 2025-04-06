@@ -16,7 +16,7 @@
 
 int LoopStatus = LOOP_NONE;
 static int PlaylistWidths[PAP_MAX_AUDIO];
-static int TitleOpt = MU_OPT_NORESIZE | MU_OPT_NOSCROLL | MU_OPT_NOCLOSE | MU_OPT_NOINTERACT;
+static int TitleOpt = MU_OPT_NORESIZE | MU_OPT_NOSCROLL | MU_OPT_NOCLOSE | MU_OPT_NOINTERACT | MU_OPT_NOFRAME;
 static int BelowOpt = MU_OPT_NORESIZE | MU_OPT_NOSCROLL | MU_OPT_NOCLOSE | MU_OPT_NOTITLE | MU_OPT_NOFRAME;
 static int PlaylistOpt = MU_OPT_NOCLOSE | MU_OPT_NOTITLE;
 static int ExtraOpt = MU_OPT_NOCLOSE | MU_OPT_NOTITLE | MU_OPT_NOFRAME | MU_OPT_NOSCROLL;
@@ -41,6 +41,26 @@ int TextHeight(mu_Font font) {
   return r_get_text_height();
 }
 
+int PAP_AudioButton(mu_Context *Context, const char *Name, int AudioID) {
+  mu_Id ButtonID = mu_get_id(Context, Name, sizeof(Name));
+  mu_Rect Rect = mu_layout_next(Context);
+  
+  mu_update_control(Context, ButtonID, Rect, 0);
+
+  int Result = 0;
+  
+  if (Context->mouse_pressed == MU_MOUSE_LEFT && Context->focus == ButtonID) {
+    PlayAudio(Audio[AudioID].Path);
+    Result |= MU_RES_CHANGE;
+  }
+  
+  mu_draw_control_frame(Context, ButtonID, Rect, AudioCurrentIndex != AudioID ? MU_COLOR_BUTTON : MU_COLOR_BASE, 0); /* Main button frame */
+  mu_draw_control_text(Context, Name, Rect, MU_COLOR_TEXT, 0);
+  // mu_draw_control_text();
+
+  return Result;
+}
+
 void InitializeGUI() {
   for (int i = 0; i < PAP_MAX_AUDIO; i++)
     PlaylistWidths[i] = PLAYLIST_WIDTH - 25;
@@ -52,6 +72,8 @@ void InitializeGUI() {
 }
 
 void MainWindow(mu_Context *Context) {
+  mu_Color OldColor;
+
   /* Title */
   if (mu_begin_window_ex(Context, "Puius Audio Player", PAP_Title, TitleOpt)) {
     mu_end_window(Context);
@@ -132,15 +154,20 @@ void MainWindow(mu_Context *Context) {
   }
   
   /* Playlist */
+  OldColor = Context->style->colors[MU_COLOR_BORDER];
+  Context->style->colors[MU_COLOR_BORDER] = Context->style->colors[MU_COLOR_WINDOWBG];
+  
   if (mu_begin_window_ex(Context, "Playlist", PAP_Playlist, PlaylistOpt)) {
+    Context->style->colors[MU_COLOR_BORDER] = OldColor;
+
     for (int i = 0; i < PAP_MAX_AUDIO; i++) {
       if (Audio[i].Path[0] == 0)
         continue;
-      
+
       mu_layout_row(Context, 0, NULL, 25);
       mu_layout_width(Context, PLAYLIST_WIDTH - 25);
-      if (mu_button(Context, Audio[i].Title))
-        PlayAudio(Audio[i].Path);
+
+      PAP_AudioButton(Context, Audio[i].Title, i);
     }
     
     mu_end_window(Context);
