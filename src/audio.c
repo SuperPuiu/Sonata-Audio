@@ -56,6 +56,10 @@ void InitializeAudio() {
   Mix_VolumeMusic(AudioVolume);
 }
 
+void AudioRemove(int Index) {
+  memset(&Audio[Index], 0, sizeof(AudioData));
+}
+
 int GetEmptyIndex() {
   for (int i = 0; i < PAP_MAX_AUDIO; i++)
     if (Audio[i].Path[0] == 0)

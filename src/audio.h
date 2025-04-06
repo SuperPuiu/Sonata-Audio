@@ -23,6 +23,7 @@ extern const char *AlbumTag;
 extern const char *TagArtist;
 extern const char *TagCopyright;
 
+void AudioRemove(int Index);
 void UpdateAudioPosition();
 void InitializeAudio();
 int AddAudio(char *Path);
