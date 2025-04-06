@@ -3,7 +3,7 @@ CFLAGS = -Isrc/.. -Wall -pedantic -std=c11 -lSDL3 -lSDL3_mixer -lm
 
 buildTest:
 	mkdir -p bin
-	gcc $(SOURCES) microui.c $(CFLAGS) -g -ggdb3 -lX11 -o bin/test
+	gcc $(SOURCES) microui.c $(CFLAGS) -g -ggdb3 -lX11 -o bin/PuiusAudioPlayer_Linux
 
 buildLinux:
 	mkdir -p bin
