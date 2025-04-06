@@ -19,9 +19,9 @@ static SDL_AudioSpec Specifications = {
 
 AudioData Audio[PAP_MAX_AUDIO];
 
-char *CurrentPath;
+char *AudioCurrentPath = NULL;
 
-int CurrentIndex;
+int AudioCurrentIndex = -1;
 int AudioVolume = MIX_MAX_VOLUME;
 
 static Mix_Music *Music;
@@ -135,11 +135,11 @@ void UpdateAudioPosition() {
 
   if (!Mix_PlayingMusic()) {
     if (LoopStatus == LOOP_SONG) {
-      if (GetAudioIndex(CurrentPath) != -1)
-        PlayAudio(CurrentPath);
+      if (GetAudioIndex(AudioCurrentPath) != -1)
+        PlayAudio(AudioCurrentPath);
     } else if (LoopStatus == LOOP_ALL) {
-      if (GetAudioIndex(CurrentPath) != -1)
-        PlayAudio(Audio[GetNextIndex(CurrentIndex)].Path);
+      if (GetAudioIndex(AudioCurrentPath) != -1)
+        PlayAudio(Audio[GetNextIndex(AudioCurrentIndex)].Path);
     }
   }
 }
@@ -158,8 +158,8 @@ double PlayAudio(char *Path) {
   Music = Mix_LoadMUS(Path);
   
   if (Music) {
-    CurrentIndex = Index;
-    CurrentPath = Path;
+    AudioCurrentIndex = Index;
+    AudioCurrentPath = Path;
 
     AudioDuration = Mix_MusicDuration(Music);
     AudioPosition = 0;

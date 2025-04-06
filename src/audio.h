@@ -17,6 +17,7 @@ typedef struct {
 extern AudioData Audio[];
 extern double AudioDuration, AudioPosition;
 extern int AudioVolume;
+extern int AudioCurrentIndex;
 extern const char *TitleTag;
 extern const char *AlbumTag;
 extern const char *TagArtist;
