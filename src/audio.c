@@ -4,8 +4,12 @@
 #ifndef WINDOWS
 #include <linux/limits.h>
 #include <SDL3_mixer/SDL_mixer.h>
+
+const char *PathDelimiter = "/";
 #else
 #include <SDL3/SDL_mixer.h>
+
+const char *PathDelimiter = "\\";
 #endif
 
 #include "gui.h"
@@ -19,7 +23,7 @@ static SDL_AudioSpec Specifications = {
 
 AudioData Audio[PAP_MAX_AUDIO];
 
-char *AudioCurrentPath = NULL;
+bool LoopLock = false; /* Used by LOOP_ALL functionality */
 
 int AudioCurrentIndex = -1;
 int AudioVolume = MIX_MAX_VOLUME;
@@ -29,6 +33,7 @@ static Mix_Music *Music;
 double AudioDuration, AudioPosition;
 static double LoopStart, LoopEnd, LoopLength;
 
+char *AudioCurrentPath = NULL;
 const char *TagTitle = NULL;
 const char *TagArtist = NULL;
 const char *TagAlbum = NULL;
@@ -112,9 +117,9 @@ int AddAudio(char *Path) {
 
     char *LocalPath = Path;
     char *LastPathPointer;
-
-    while (*(LocalPath += strspn(LocalPath, "/")) != '\0') {
-      size_t Length = strcspn(LocalPath, "/");
+    
+    while (*(LocalPath += strspn(LocalPath, PathDelimiter)) != '\0') {
+      size_t Length = strcspn(LocalPath, PathDelimiter);
       LastPathPointer = LocalPath;
       LocalPath += Length;
     }
@@ -130,16 +135,23 @@ int AddAudio(char *Path) {
 }
 
 void UpdateAudioPosition() {
-  if (Mix_PlayingMusic())
+  if (Mix_PlayingMusic()) {
+    LoopLock = false;
     AudioPosition = Mix_GetMusicPosition(Music);
+  }
 
   if (!Mix_PlayingMusic()) {
     if (LoopStatus == LOOP_SONG) {
       if (GetAudioIndex(AudioCurrentPath) != -1)
         PlayAudio(AudioCurrentPath);
-    } else if (LoopStatus == LOOP_ALL) {
+    } else if (LoopStatus == LOOP_ALL && LoopLock == false) {
+      LoopLock = true;
+
       if (GetAudioIndex(AudioCurrentPath) != -1)
         PlayAudio(Audio[GetNextIndex(AudioCurrentIndex)].Path);
+    } else if (LoopStatus == LOOP_ALL && LoopLock == true) {
+      /* Probably not the best way to handle it */
+      PlayAudio(Audio[AudioCurrentIndex].Path);
     }
   }
 }
@@ -157,12 +169,13 @@ double PlayAudio(char *Path) {
 
   Music = Mix_LoadMUS(Path);
   
+  SDL_Log("Attempting to load %s", Path);
+
   if (Music) {
     AudioCurrentIndex = Index;
     AudioCurrentPath = Path;
 
     AudioDuration = Mix_MusicDuration(Music);
-    AudioPosition = 0;
     AudioPosition = 0;
 
     TagTitle = Mix_GetMusicTitle(Music);
@@ -174,9 +187,12 @@ double PlayAudio(char *Path) {
     LoopEnd = Mix_GetMusicLoopEndTime(Music);
     LoopLength = Mix_GetMusicLoopLengthTime(Music);
     
-    Mix_FadeInMusic(Music, false, 0);
+    SDL_Log("Loaded!");
+    
+    Mix_PlayMusic(Music, 0);
+    Mix_SetMusicPosition(0);
     return LoopLength;
   }
-
+  
   return 0;
 }
