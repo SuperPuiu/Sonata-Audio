@@ -17,4 +17,4 @@ run:
 
 clean:
 	rm bin/PuiusAudioPlayer_Linux
-	rm bin/PuiusAudioPlayer_Windows
+	rm bin/PuiusAudioPlayer_Windows.exe
