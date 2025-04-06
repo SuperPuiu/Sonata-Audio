@@ -24,6 +24,8 @@ int main(int argc, char **argv) {
   Context->text_height = TextHeight;
 
   while (Running) {
+    uint64_t Start = SDL_GetPerformanceCounter();
+
     UpdateAudioPosition();
     SDL_Event Event;
 
@@ -77,8 +79,12 @@ int main(int argc, char **argv) {
     }
 
     r_present();
-
-    SDL_Delay(1000 / 45);
+    
+    uint64_t End = SDL_GetPerformanceCounter();
+    float Elapsed = (End - Start) / (float)SDL_GetPerformanceFrequency();
+    
+    if (Elapsed > 0)
+      SDL_Delay((1000 / FPS) - Elapsed);
   }
 
   free(Context);

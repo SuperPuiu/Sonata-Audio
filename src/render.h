@@ -3,8 +3,9 @@
 
 #include "microui.h"
 
-#define WINDOW_WIDTH 800
+#define WINDOW_WIDTH  800
 #define WINDOW_HEIGHT 600
+#define FPS           45
 
 void r_init(void);
 void r_draw_rect(mu_Rect rect, mu_Color color);
