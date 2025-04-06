@@ -20,6 +20,7 @@ static int TitleOpt = MU_OPT_NORESIZE | MU_OPT_NOSCROLL | MU_OPT_NOCLOSE | MU_OP
 static int BelowOpt = MU_OPT_NORESIZE | MU_OPT_NOSCROLL | MU_OPT_NOCLOSE | MU_OPT_NOTITLE | MU_OPT_NOFRAME;
 static int PlaylistOpt = MU_OPT_NOCLOSE | MU_OPT_NOTITLE;
 static int ExtraOpt = MU_OPT_NOCLOSE | MU_OPT_NOTITLE | MU_OPT_NOFRAME | MU_OPT_NOSCROLL;
+static int SelectedAudio;
 
 float l_AudioPosition;
 static float AudioFloat = MIX_MAX_VOLUME;
@@ -52,6 +53,9 @@ int PAP_AudioButton(mu_Context *Context, const char *Name, int AudioID) {
   if (Context->mouse_pressed == MU_MOUSE_LEFT && Context->focus == ButtonID) {
     PlayAudio(Audio[AudioID].Path);
     Result |= MU_RES_CHANGE;
+  } else if (Context->mouse_pressed == MU_MOUSE_RIGHT && Context->focus == ButtonID && AudioID != AudioCurrentIndex) {
+    mu_open_popup(Context, "Menu");
+    SelectedAudio = AudioID;
   }
   
   mu_draw_control_frame(Context, ButtonID, Rect, AudioCurrentIndex != AudioID ? MU_COLOR_BUTTON : MU_COLOR_BASE, 0); /* Main button frame */
@@ -100,7 +104,7 @@ void MainWindow(mu_Context *Context) {
   if (mu_begin_window_ex(Context, "Puius Audio Player", PAP_Title, TitleOpt)) {
     mu_end_window(Context);
   }
-  
+
   /* Below */
   if (mu_begin_window_ex(Context, "BELOW", PAP_Below, BelowOpt)) {
     mu_layout_row(Context, 4, (int[]){100, 100, 300, 100}, 25);
@@ -190,6 +194,17 @@ void MainWindow(mu_Context *Context) {
       mu_layout_width(Context, PLAYLIST_WIDTH - 25);
 
       PAP_AudioButton(Context, Audio[i].Title, i);
+    }
+    
+    mu_Container *Container = mu_get_container(Context, "Menu");
+    
+    if (mu_begin_popup(Context, "Menu")) {
+      if (mu_button(Context, "Remove")) {
+        AudioRemove(SelectedAudio);
+        Container->open = 0;
+      }
+
+      mu_end_popup(Context);
     }
     
     mu_end_window(Context);
