@@ -61,6 +61,28 @@ int PAP_AudioButton(mu_Context *Context, const char *Name, int AudioID) {
   return Result;
 }
 
+int PAP_Slider(mu_Context *Context, mu_Real *Value, int Low, int High) {
+  int Result = 0;
+  mu_Rect *l_Rect;
+
+  mu_push_id(Context, &Value, sizeof(Value));
+
+  /* Get the next rect, save it and push it back */
+  mu_Rect Rect = mu_layout_next(Context);
+  l_Rect = &Rect;
+  mu_layout_set_next(Context, Rect, 0);
+
+  Result = mu_slider_ex(Context, Value, Low, High, 0, "%.2f", MU_OPT_ALIGNCENTER);
+
+  if (Context->scroll_delta.y != 0 && mu_mouse_over(Context, *l_Rect)) {
+    *Value += Context->scroll_delta.y / (Context->scroll_delta.y / 2) * (Context->scroll_delta.y > 0 ? -1 : 1);
+    Result |= MU_RES_CHANGE;
+  }
+
+  mu_pop_id(Context);
+  return Result;
+}
+
 void InitializeGUI() {
   for (int i = 0; i < PAP_MAX_AUDIO; i++)
     PlaylistWidths[i] = PLAYLIST_WIDTH - 25;
@@ -142,10 +164,10 @@ void MainWindow(mu_Context *Context) {
       Mix_SetMusicPosition(AudioPosition);
     }
 
-    l_AudioPosition = (float)AudioPosition;
+    l_AudioPosition = AudioPosition;
     
     mu_layout_set_next(Context, mu_rect(WINDOW_WIDTH - 110, 0, 100, 25), 1);
-    if (mu_slider_ex(Context, &AudioFloat, 0, 128, 0, MU_SLIDER_FMT, MU_OPT_ALIGNCENTER)) {
+    if (PAP_Slider(Context, &AudioFloat, 0, 128)) {
       AudioVolume = (int)AudioFloat;
       Mix_VolumeMusic(AudioVolume);
     }
