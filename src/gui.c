@@ -9,6 +9,7 @@
 #include <sys/stat.h>
 #include <SDL3_mixer/SDL_mixer.h>
 #else
+#include <windows.h>
 #include <SDL3/SDL_mixer.h>
 #endif
 
@@ -18,7 +19,7 @@ int LoopStatus = LOOP_NONE;
 static int PlaylistWidths[PAP_MAX_AUDIO];
 static int TitleOpt = MU_OPT_NORESIZE | MU_OPT_NOSCROLL | MU_OPT_NOCLOSE | MU_OPT_NOINTERACT | MU_OPT_NOFRAME;
 static int BelowOpt = MU_OPT_NORESIZE | MU_OPT_NOSCROLL | MU_OPT_NOCLOSE | MU_OPT_NOTITLE | MU_OPT_NOFRAME;
-static int PlaylistOpt = MU_OPT_NOCLOSE | MU_OPT_NOTITLE;
+static int PlaylistOpt = MU_OPT_NOCLOSE | MU_OPT_NOTITLE | MU_OPT_NOBORDER;
 static int ExtraOpt = MU_OPT_NOCLOSE | MU_OPT_NOTITLE | MU_OPT_NOFRAME | MU_OPT_NOSCROLL;
 static int SelectedAudio;
 
@@ -58,7 +59,7 @@ int PAP_AudioButton(mu_Context *Context, const char *Name, int AudioID) {
     SelectedAudio = AudioID;
   }
   
-  mu_draw_control_frame(Context, ButtonID, Rect, AudioCurrentIndex != AudioID ? MU_COLOR_BUTTON : MU_COLOR_BASE, 0); /* Main button frame */
+  mu_draw_control_frame(Context, ButtonID, Rect, AudioCurrentIndex != AudioID ? MU_COLOR_BUTTON : MU_COLOR_BASE, MU_OPT_NOBORDER); /* Main button frame */
   mu_draw_control_text(Context, Name, Rect, MU_COLOR_TEXT, 0);
   // mu_draw_control_text();
 
@@ -98,8 +99,6 @@ void InitializeGUI() {
 }
 
 void MainWindow(mu_Context *Context) {
-  mu_Color OldColor;
-
   /* Title */
   if (mu_begin_window_ex(Context, "Puius Audio Player", PAP_Title, TitleOpt)) {
     mu_end_window(Context);
@@ -111,6 +110,7 @@ void MainWindow(mu_Context *Context) {
 
     if (mu_button(Context, "Choose directory")) {
       const char *Path = OpenDialogue(PFD_DIRECTORY);
+      size_t PathLen = strlen(Path);
 
       if (Path) {
         #ifndef WINDOWS
@@ -118,7 +118,6 @@ void MainWindow(mu_Context *Context) {
         struct dirent *Entry; // I guess the name is right
 
         if ((Directory = opendir(Path)) != NULL) {
-          size_t PathLen = strlen(Path);
           char FullPath[PATH_MAX];
           
           memcpy(FullPath, Path, PathLen);
@@ -147,6 +146,33 @@ void MainWindow(mu_Context *Context) {
           closedir(Directory);
         } else {
           SDL_Log("Directory is NULL.");
+        }
+        #else
+        char AudioPath[MAX_PATH];
+
+        TCHAR DirectoryPath[MAX_PATH];
+        HANDLE HandleFind = INVALID_HANDLE_VALUE;
+        WIN32_FIND_DATA FileData;
+
+        strcat(DirectoryPath, Path);
+        strcat(DirectoryPath, "\\*");
+        memcpy(AudioPath, Path, PathLen);
+
+        HandleFind = FindFirstFile(DirectoryPath, &FileData);
+
+        if (HandleFind != INVALID_HANDLE_VALUE) {
+          do {
+            /* Maybe one day we'll handle multiple directories. Maybe. */
+            if (!(FileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+              AudioPath[PathLen] = '\0';
+              strcat(AudioPath, "\\");
+              strcat(AudioPath, FileData.cFileName);
+
+              AddAudio(AudioPath);
+            }
+          } while (FindNextFile(HandleFind, &FileData) != 0);
+        } else {
+          SDL_Log("INVALID_HANDLE_VALUE returned by FindFirstFile.");
         }
         #endif
       }
@@ -180,12 +206,7 @@ void MainWindow(mu_Context *Context) {
   }
   
   /* Playlist */
-  OldColor = Context->style->colors[MU_COLOR_BORDER];
-  Context->style->colors[MU_COLOR_BORDER] = Context->style->colors[MU_COLOR_WINDOWBG];
-  
   if (mu_begin_window_ex(Context, "Playlist", PAP_Playlist, PlaylistOpt)) {
-    Context->style->colors[MU_COLOR_BORDER] = OldColor;
-
     for (int i = 0; i < PAP_MAX_AUDIO; i++) {
       if (Audio[i].Path[0] == 0)
         continue;
@@ -198,6 +219,9 @@ void MainWindow(mu_Context *Context) {
     
     mu_Container *Container = mu_get_container(Context, "Menu");
     
+    if (Audio[0].Path[0] == 0)
+      Container->open = 0;
+
     if (mu_begin_popup(Context, "Menu")) {
       if (mu_button(Context, "Remove")) {
         AudioRemove(SelectedAudio);
