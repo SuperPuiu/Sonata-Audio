@@ -36,8 +36,11 @@ const char *OpenDialogue(enum DialogueOption Option) {
 }
 #else
 #include <windows.h>
+#include <shlobj.h>
+#include <stdbool.h>
 
-char ResultBuffer[320];
+char ResultBuffer[MAX_PATH];
+LPITEMIDLIST PidlRoot = NULL;
 
 struct WindowInfo {
   unsigned long ProcessId;
@@ -88,12 +91,39 @@ void PopulateOFN(OPENFILENAME *OFN) {
   OFN->Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
 }
 
+void PopulateBrowseInfo(BROWSEINFO *BI) {
+  BI->hwndOwner = GetHWND();
+  BI->pidlRoot = PidlRoot;
+  BI->pszDisplayName = ResultBuffer;
+  BI->lpszTitle = "Select a folder";
+  BI->ulFlags = 0;
+  BI->lpfn = NULL;
+  BI->lParam = 0;
+  BI->iImage = -1;
+}
+
 const char *OpenDialogue(enum DialogueOption Option) {
-  OPENFILENAME OFN;
-  PopulateOFN(&OFN);
+  if (Option == PFD_DIRECTORY) {
+    BROWSEINFO BI = {0};
+    LPITEMIDLIST Pidl;
+    bool Status = false;
+
+    PopulateBrowseInfo(&BI);
+    Pidl = SHBrowseForFolder(&BI);
+    Status = SHGetPathFromIDList(Pidl, ResultBuffer);
+    
+    if (PidlRoot) {
+      CoTaskMemFree(PidlRoot);
+      PidlRoot = NULL;
+    }
+    
+    return Status == true ? ResultBuffer : NULL;
+  } else {
+    OPENFILENAME OFN;
+    PopulateOFN(&OFN);
   
-  // TODO: Make choosing directories work too
-  return GetOpenFileName(&OFN) == TRUE ? OFN.lpstrFile : NULL;
+    return GetOpenFileName(&OFN) == TRUE ? OFN.lpstrFile : NULL;
+  }
 }
 
 #endif
