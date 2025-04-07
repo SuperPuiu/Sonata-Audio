@@ -106,7 +106,7 @@ int AddAudio(char *Path) {
   l_Music = Mix_LoadMUS(Path);
 
   if (!l_Music) {
-    SDL_Log("Failed to load %s: %s", Path, SDL_GetError());
+    SDL_Log("Failed to load \"%s\": %s", Path, SDL_GetError());
     return -1;
   }
   
@@ -173,7 +173,7 @@ double PlayAudio(char *Path) {
 
   Music = Mix_LoadMUS(Path);
   
-  SDL_Log("Attempting to load %s", Path);
+  SDL_Log("Attempting to load \"%s\"", Path);
 
   if (Music) {
     AudioCurrentIndex = Index;
