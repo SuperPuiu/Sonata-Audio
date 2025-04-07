@@ -57,11 +57,11 @@ static mu_Style default_style = {
   {
     { 230, 230, 230, 255 }, /* MU_COLOR_TEXT */
     { 25,  25,  25,  255 }, /* MU_COLOR_BORDER */
-    { 50,  50,  50,  255 }, /* MU_COLOR_WINDOWBG */
+    { 45,  45,  45,  255 }, /* MU_COLOR_WINDOWBG */
     { 25,  25,  25,  255 }, /* MU_COLOR_TITLEBG */
     { 240, 240, 240, 255 }, /* MU_COLOR_TITLETEXT */
     { 0,   0,   0,   0   }, /* MU_COLOR_PANELBG */
-    { 75,  75,  75,  255 }, /* MU_COLOR_BUTTON */
+    { 65,  65,  65,  255 }, /* MU_COLOR_BUTTON */
     { 95,  95,  95,  255 }, /* MU_COLOR_BUTTONHOVER */
     { 115, 115, 115, 255 }, /* MU_COLOR_BUTTONFOCUS */
     { 30,  30,  30,  255 }, /* MU_COLOR_BASE */
@@ -115,13 +115,13 @@ static int rect_overlaps_vec2(mu_Rect r, mu_Vec2 p) {
 }
 
 
-static void draw_frame(mu_Context *ctx, mu_Rect rect, int colorid) {
+static void draw_frame(mu_Context *ctx, mu_Rect rect, int colorid, int draw_border) {
   mu_draw_rect(ctx, rect, ctx->style->colors[colorid]);
   if (colorid == MU_COLOR_SCROLLBASE  ||
       colorid == MU_COLOR_SCROLLTHUMB ||
       colorid == MU_COLOR_TITLEBG) { return; }
   /* draw border */
-  if (ctx->style->colors[MU_COLOR_BORDER].a) {
+  if (ctx->style->colors[MU_COLOR_BORDER].a && draw_border == 1) {
     mu_draw_box(ctx, expand_rect(rect, 1), ctx->style->colors[MU_COLOR_BORDER]);
   }
 }
@@ -645,7 +645,7 @@ void mu_draw_control_frame(mu_Context *ctx, mu_Id id, mu_Rect rect,
 {
   if (opt & MU_OPT_NOFRAME) { return; }
   colorid += (ctx->focus == id) ? 2 : (ctx->hover == id) ? 1 : 0;
-  ctx->draw_frame(ctx, rect, colorid);
+  ctx->draw_frame(ctx, rect, colorid, opt & MU_OPT_NOBORDER ? 0 : 1);
 }
 
 
@@ -949,7 +949,7 @@ static int header(mu_Context *ctx, const char *label, int istreenode, int opt) {
 
   /* draw */
   if (istreenode) {
-    if (ctx->hover == id) { ctx->draw_frame(ctx, r, MU_COLOR_BUTTONHOVER); }
+    if (ctx->hover == id) { ctx->draw_frame(ctx, r, MU_COLOR_BUTTONHOVER, 1); }
   } else {
     mu_draw_control_frame(ctx, id, r, MU_COLOR_BUTTON, 0);
   }
@@ -1008,11 +1008,11 @@ void mu_end_treenode(mu_Context *ctx) {
       cnt->scroll.y = mu_clamp(cnt->scroll.y, 0, maxscroll);                \
                                                                             \
       /* draw base and thumb */                                             \
-      ctx->draw_frame(ctx, base, MU_COLOR_SCROLLBASE);                      \
+      ctx->draw_frame(ctx, base, MU_COLOR_SCROLLBASE, 1);                      \
       thumb = base;                                                         \
       thumb.h = mu_max(ctx->style->thumb_size, base.h * b->h / cs.y);       \
       thumb.y += cnt->scroll.y * (base.h - thumb.h) / maxscroll;            \
-      ctx->draw_frame(ctx, thumb, MU_COLOR_SCROLLTHUMB);                    \
+      ctx->draw_frame(ctx, thumb, MU_COLOR_SCROLLTHUMB, 1);                 \
                                                                             \
       /* set this as the scroll_target (will get scrolled on mousewheel) */ \
       /* if the mouse is over it */                                         \
@@ -1093,14 +1093,14 @@ int mu_begin_window_ex(mu_Context *ctx, const char *title, mu_Rect rect, int opt
 
   /* draw frame */
   if (~opt & MU_OPT_NOFRAME) {
-    ctx->draw_frame(ctx, rect, MU_COLOR_WINDOWBG);
+    ctx->draw_frame(ctx, rect, MU_COLOR_WINDOWBG, ~opt & MU_OPT_NOBORDER);
   }
 
   /* do title bar */
   if (~opt & MU_OPT_NOTITLE) {
     mu_Rect tr = rect;
     tr.h = ctx->style->title_height;
-    ctx->draw_frame(ctx, tr, MU_COLOR_TITLEBG);
+    ctx->draw_frame(ctx, tr, MU_COLOR_TITLEBG, 1);
 
     /* do title text */
     if (~opt & MU_OPT_NOTITLE) {
@@ -1194,7 +1194,7 @@ void mu_begin_panel_ex(mu_Context *ctx, const char *name, int opt) {
   cnt = get_container(ctx, ctx->last_id, opt);
   cnt->rect = mu_layout_next(ctx);
   if (~opt & MU_OPT_NOFRAME) {
-    ctx->draw_frame(ctx, cnt->rect, MU_COLOR_PANELBG);
+    ctx->draw_frame(ctx, cnt->rect, MU_COLOR_PANELBG, 1);
   }
   push(ctx->container_stack, cnt);
   push_container_body(ctx, cnt, cnt->rect, opt);
