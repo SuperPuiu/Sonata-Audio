@@ -10,7 +10,7 @@
 #include "gui.h"
 
 bool Running = true;
-unsigned int FPS = 45, DefaultFPS = 45;
+unsigned int FPS = 60, DefaultFPS = 60;
 
 int main(int argc, char **argv) {
   SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_EVENTS);
