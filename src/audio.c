@@ -156,6 +156,11 @@ void UpdateAudioPosition() {
     } else if (LoopStatus == LOOP_ALL && LoopLock == true) {
       /* Probably not the best way to handle it */
       PlayAudio(Audio[AudioCurrentIndex].Path);
+    } else if (LoopStatus == LOOP_NONE) {
+      Mix_FreeMusic(Music);
+
+      Music = NULL;
+      AudioCurrentIndex = -1;
     }
   }
 }
