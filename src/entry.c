@@ -10,6 +10,7 @@
 #include "gui.h"
 
 bool Running = true;
+unsigned int FPS = 45, DefaultFPS = 45;
 
 int main(int argc, char **argv) {
   SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_EVENTS);
@@ -57,6 +58,15 @@ int main(int argc, char **argv) {
           int c = key_map[Event.key.key & 0xff];
           if (c && Event.type == SDL_EVENT_KEY_DOWN) {mu_input_keydown(Context, c);}
           if (c && Event.type == SDL_EVENT_KEY_UP) {mu_input_keyup(Context, c);}
+          break;
+        }
+        
+        case SDL_EVENT_WINDOW_FOCUS_LOST:
+        case SDL_EVENT_WINDOW_FOCUS_GAINED: {
+          if (Event.window.type == SDL_EVENT_WINDOW_FOCUS_GAINED)
+            FPS = DefaultFPS;
+          else if (Event.window.type == SDL_EVENT_WINDOW_FOCUS_LOST)
+            FPS = 5;
           break;
         }
       }
