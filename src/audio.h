@@ -12,16 +12,16 @@
 typedef struct {
   char Title[256];
   char Path[PATH_MAX];
+  
+  char TagArtist[128];
+  char TagCopyright[128];
+  char TagAlbum[128];
 } AudioData;
 
 extern AudioData Audio[];
 extern double AudioDuration, AudioPosition;
 extern int AudioVolume;
 extern int AudioCurrentIndex;
-extern const char *TitleTag;
-extern const char *AlbumTag;
-extern const char *TagArtist;
-extern const char *TagCopyright;
 
 void AudioRemove(int Index);
 void UpdateAudioPosition();

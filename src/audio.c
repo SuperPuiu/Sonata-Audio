@@ -34,10 +34,6 @@ double AudioDuration, AudioPosition;
 static double LoopStart, LoopEnd, LoopLength;
 
 char *AudioCurrentPath = NULL;
-const char *TagTitle = NULL;
-const char *TagArtist = NULL;
-const char *TagAlbum = NULL;
-const char *TagCopyright = NULL;
 
 void InitializeAudio() {
   AudioPosition = 0;
@@ -100,6 +96,10 @@ int AddAudio(char *Path) {
   Mix_Music *l_Music;
   char LocalTagTitle[256];
 
+  const char *TagArtist = NULL;
+  const char *TagAlbum = NULL;
+  const char *TagCopyright = NULL;
+
   if (Index == -1)
     return -1;
 
@@ -130,9 +130,20 @@ int AddAudio(char *Path) {
     
     memcpy(LocalTagTitle, LastPathPointer, strlen(LastPathPointer));
   }
+  
+  TagArtist = Mix_GetMusicArtistTag(Music);
+  TagCopyright = Mix_GetMusicCopyrightTag(Music);
+  TagAlbum = Mix_GetMusicAlbumTag(Music);
+  
+  if (TagArtist[0] == 0) {TagArtist = "N/A";}
+  if (TagCopyright[0] == 0) {TagCopyright = "N/A";}
+  if (TagAlbum[0] == 0) {TagAlbum = "N/A";}
 
   memcpy(Audio[Index].Title, LocalTagTitle, strlen(LocalTagTitle));
   memcpy(Audio[Index].Path, Path, strlen(Path));
+  memcpy(Audio[Index].TagArtist, TagArtist, strlen(TagArtist));
+  memcpy(Audio[Index].TagAlbum, TagAlbum, strlen(TagAlbum));
+  memcpy(Audio[Index].TagCopyright, TagCopyright, strlen(TagCopyright));
 
   Mix_FreeMusic(l_Music);
   return Index;
@@ -186,11 +197,6 @@ double PlayAudio(char *Path) {
 
     AudioDuration = Mix_MusicDuration(Music);
     AudioPosition = 0;
-
-    TagTitle = Mix_GetMusicTitle(Music);
-    TagArtist = Mix_GetMusicArtistTag(Music);
-    TagCopyright = Mix_GetMusicCopyrightTag(Music);
-    TagAlbum = Mix_GetMusicAlbumTag(Music);
 
     LoopStart = Mix_GetMusicLoopStartTime(Music);
     LoopEnd = Mix_GetMusicLoopEndTime(Music);
