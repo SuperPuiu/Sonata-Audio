@@ -17,19 +17,23 @@
 
 int LoopStatus = LOOP_NONE;
 static int PlaylistWidths[PAP_MAX_AUDIO];
-static int TitleOpt = MU_OPT_NORESIZE | MU_OPT_NOSCROLL | MU_OPT_NOCLOSE | MU_OPT_NOINTERACT | MU_OPT_NOFRAME;
+static int TitleOpt = MU_OPT_NORESIZE | MU_OPT_NOSCROLL | MU_OPT_NOFRAME | MU_OPT_ANCHORED;
 static int BelowOpt = MU_OPT_NORESIZE | MU_OPT_NOSCROLL | MU_OPT_NOCLOSE | MU_OPT_NOTITLE | MU_OPT_NOFRAME;
-static int PlaylistOpt = MU_OPT_NOCLOSE | MU_OPT_NOTITLE | MU_OPT_NOBORDER;
+static int PlaylistOpt = MU_OPT_NOCLOSE | MU_OPT_NOTITLE | MU_OPT_NOBORDER | MU_OPT_NOINTERACT;
 static int ExtraOpt = MU_OPT_NOCLOSE | MU_OPT_NOTITLE | MU_OPT_NOFRAME | MU_OPT_NOSCROLL;
+static int InfoFrameOpt = 0;
 static int SelectedAudio;
 
 float l_AudioPosition;
 static float AudioFloat = MIX_MAX_VOLUME;
 
+static bool InfoOpen = false;
+
 static mu_Rect PAP_Title;
 static mu_Rect PAP_Below;
 static mu_Rect PAP_Extra;
 static mu_Rect PAP_Playlist;
+static mu_Rect PAP_InfoFrame;
 
 static const char *InteractButtonText = "Pause";
 static const char *LoopButtonText = "No loop";
@@ -57,6 +61,7 @@ int PAP_AudioButton(mu_Context *Context, const char *Name, int AudioID) {
   } else if (Context->mouse_pressed == MU_MOUSE_RIGHT && Context->focus == ButtonID && AudioID != AudioCurrentIndex) {
     mu_open_popup(Context, "Menu");
     SelectedAudio = AudioID;
+    Result |= MU_RES_CHANGE;
   }
   
   mu_draw_control_frame(Context, ButtonID, Rect, AudioCurrentIndex != AudioID ? MU_COLOR_BUTTON : MU_COLOR_BASE, MU_OPT_NOBORDER); /* Main button frame */
@@ -96,12 +101,19 @@ void InitializeGUI() {
   PAP_Below = mu_rect(0, WINDOW_HEIGHT - BELOW_HEIGHT, WINDOW_WIDTH, BELOW_HEIGHT);
   PAP_Playlist = mu_rect(WINDOW_WIDTH / 2 - PLAYLIST_WIDTH / 2, WINDOW_HEIGHT / 2 - PLAYLIST_HEIGHT / 2, PLAYLIST_WIDTH, PLAYLIST_HEIGHT);
   PAP_Extra = mu_rect(0, WINDOW_HEIGHT - BELOW_HEIGHT - EXTRA_HEIGHT, WINDOW_WIDTH, EXTRA_HEIGHT);
+  PAP_InfoFrame = mu_rect(WINDOW_WIDTH / 2 - INFO_WIDTH / 2, WINDOW_HEIGHT / 2 - INFO_HEIGHT / 2, INFO_WIDTH, INFO_HEIGHT);
 }
 
 void MainWindow(mu_Context *Context) {
+  mu_Container *InfoContainer = mu_get_container(Context, "INFO");
+  if (!InfoContainer->open) {InfoOpen = false;}
+
   /* Title */
   if (mu_begin_window_ex(Context, "Puius Audio Player", PAP_Title, TitleOpt)) {
     mu_end_window(Context);
+  } else {
+    Running = false;
+    return;
   }
 
   /* Below */
@@ -207,6 +219,8 @@ void MainWindow(mu_Context *Context) {
   
   /* Playlist */
   if (mu_begin_window_ex(Context, "Playlist", PAP_Playlist, PlaylistOpt)) {
+    mu_Container *Container = mu_get_container(Context, "Menu");
+
     for (int i = 0; i < PAP_MAX_AUDIO; i++) {
       if (Audio[i].Path[0] == 0)
         continue;
@@ -217,14 +231,18 @@ void MainWindow(mu_Context *Context) {
       PAP_AudioButton(Context, Audio[i].Title, i);
     }
     
-    mu_Container *Container = mu_get_container(Context, "Menu");
-    
     if (Audio[0].Path[0] == 0)
       Container->open = 0;
 
     if (mu_begin_popup(Context, "Menu")) {
       if (mu_button(Context, "Remove")) {
         AudioRemove(SelectedAudio);
+        Container->open = 0;
+      }
+
+      if (mu_button(Context, "About")) {
+        InfoOpen = true;
+        InfoContainer->open = 1;
         Container->open = 0;
       }
 
@@ -266,6 +284,43 @@ void MainWindow(mu_Context *Context) {
       }
     }
 
+    mu_end_window(Context);
+  }
+  
+  InfoContainer->open = InfoOpen;
+  InfoContainer->zindex = 2;
+
+  if (mu_begin_window_ex(Context, "INFO", PAP_InfoFrame, InfoFrameOpt)) {
+    Context->hover_root = Context->next_hover_root = InfoContainer;
+    mu_bring_to_front(Context, InfoContainer);
+
+    char ArtistBuf[128 + 8];
+    char CopyrightBuf[128 + 11];
+    char AlbumBuf[128 + 7];
+
+    memset(ArtistBuf, 0, 136);
+    memset(CopyrightBuf, 0, 139);
+    memset(AlbumBuf, 0, 135);
+
+    memcpy(ArtistBuf, "Artist: ", 8);
+    memcpy(ArtistBuf + 8, Audio[SelectedAudio].TagArtist, strlen(Audio[SelectedAudio].TagArtist));
+    
+    memcpy(CopyrightBuf, "Copyright: ", 11);
+    memcpy(CopyrightBuf + 11, Audio[SelectedAudio].TagCopyright, strlen(Audio[SelectedAudio].TagCopyright));
+    memcpy(AlbumBuf, "Album: ", 7);
+    memcpy(AlbumBuf + 7, Audio[SelectedAudio].TagAlbum, strlen(Audio[SelectedAudio].TagAlbum));
+    
+    /* Columns hate me */
+    
+    mu_layout_row(Context, 1, (int[]){INFO_WIDTH - 25}, 25);
+    mu_label(Context, ArtistBuf);
+
+    mu_layout_row(Context, 1, (int[]){INFO_WIDTH - 25}, 25);
+    mu_label(Context, CopyrightBuf);
+
+    mu_layout_row(Context, 1, (int[]){INFO_WIDTH - 25}, 25);
+    mu_label(Context, AlbumBuf);
+    
     mu_end_window(Context);
   }
 }

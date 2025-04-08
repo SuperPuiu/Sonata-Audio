@@ -5,6 +5,8 @@
 #define EXTRA_HEIGHT    35
 #define PLAYLIST_WIDTH  500
 #define PLAYLIST_HEIGHT 300
+#define INFO_WIDTH 300
+#define INFO_HEIGHT 200
 
 #include "microui.h"
 
