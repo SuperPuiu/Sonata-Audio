@@ -32,9 +32,14 @@ static inline bool InRectangle(mu_Rect Rect, int X, int Y) {
 }
 
 static inline uint8_t GetAtlasColor(mu_Rect *Texture, int X, int Y) {
-  assert(X < Texture->w);
+  if (X >= Texture->w)
+    return 0x00;
+  else if (Y >= Texture->h)
+    return 0x00;
+  else if (Y >= Y * ATLAS_WIDTH + X)
+    return 0x00;
+
   X += Texture->x;
-  assert(Y < Texture->h);
   Y += Texture->y;
   
   return atlas_texture[Y * ATLAS_WIDTH + X];
@@ -59,26 +64,32 @@ void FlushBuffers() {
     mu_Rect *Source = &SourceBuffer[i];
     mu_Rect *Texture = &TextureBuffer[i];
 
-    unsigned int Y = mu_max(Source->y, Clip.y);
-    unsigned int X = mu_max(Source->x, Clip.x);
-    unsigned int Width = mu_min(Source->x + Source->w, Clip.x + Clip.w);
-    unsigned int Height = mu_min(Source->y + Source->h, Clip.y + Clip.h);
+    unsigned short Y = mu_max(Source->y, Clip.y);
+    unsigned short X = mu_max(Source->x, Clip.x);
+    unsigned short Width = mu_min(Source->x + Source->w, Clip.x + Clip.w);
+    unsigned short Height = mu_min(Source->y + Source->h, Clip.y + Clip.h);
 
-    for (unsigned int CurrentY = Y; CurrentY < Height; CurrentY++) {
-      for (unsigned int CurrentX = X; CurrentX < Width; CurrentX++) {
-        assert(InRectangle(*Source, CurrentX, CurrentY));
-        assert(InRectangle(Clip, CurrentX, CurrentY));
+    for (unsigned short CurrentY = Y; CurrentY < Height; CurrentY++) {
+      for (unsigned short CurrentX = X; CurrentX < Width; CurrentX++) {
+        uint32_t PixelLocation = CurrentY * WINDOW_WIDTH + CurrentX;
+
+        // assert(InRectangle(*Source, CurrentX, CurrentY));
+        // assert(InRectangle(Clip, CurrentX, CurrentY));
         
         /* Text */
         if (Source->w == Texture->w && Source->h == Texture->h) {
-          uint8_t TextureColor = GetAtlasColor(Texture, CurrentX - Source->x, CurrentY - Source->y);
-          uint32_t CurrentPixel = PAP_GetPixel(CurrentX, CurrentY);
-          PAP_PutPixel(CurrentX, CurrentY, CurrentPixel | (int)ColorToNumber(mu_color(TextureColor, TextureColor, TextureColor, 255)));
+          if (PixelLocation <= WINDOW_WIDTH * WINDOW_HEIGHT && PixelLocation >= 0) {
+            uint8_t TextureColor = GetAtlasColor(Texture, CurrentX - Source->x, CurrentY - Source->y);
+            uint32_t CurrentPixel = PAP_GetPixel(CurrentX, CurrentY);
+            PAP_PutPixel(CurrentX, CurrentY, CurrentPixel | ColorToNumber(mu_color(TextureColor, TextureColor, TextureColor, 255)));
+          }
         /* Other */
         } else {
-          mu_Color NewColor = BlendPixel(NumberToColor(PAP_GetPixel(CurrentX, CurrentY)), ColorBuffer[i]);
-          uint32_t PixelColor = ColorToNumber(NewColor);
-          PAP_PutPixel(CurrentX, CurrentY, PixelColor);
+          if (PixelLocation <= WINDOW_WIDTH * WINDOW_HEIGHT && PixelLocation >= 0) {
+            mu_Color NewColor = BlendPixel(NumberToColor(PAP_GetPixel(CurrentX, CurrentY)), ColorBuffer[i]);
+            uint32_t PixelColor = ColorToNumber(NewColor);
+            PAP_PutPixel(CurrentX, CurrentY, PixelColor);
+          }
         }
 
       }

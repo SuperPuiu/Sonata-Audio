@@ -2,9 +2,12 @@
 #define RENDERER_H
 
 #include "microui.h"
+#include <stdbool.h>
 
 #define WINDOW_WIDTH  800
 #define WINDOW_HEIGHT 600
+
+extern bool Running;
 
 void r_init(void);
 void r_draw_rect(mu_Rect rect, mu_Color color);
