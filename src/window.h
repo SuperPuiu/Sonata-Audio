@@ -3,6 +3,7 @@
 
 #include <SDL3/SDL.h>
 #include <stdint.h>
+#include <assert.h>
 
 #include "render.h"
 
@@ -16,6 +17,7 @@ void PAP_PutPixel(int X, int Y, uint32_t PixelData) {
 }
 
 uint32_t PAP_GetPixel(int X, int Y) {
+  assert(Y * WINDOW_WIDTH + X <= WINDOW_WIDTH * WINDOW_HEIGHT);
   return Buffer[Y * WINDOW_WIDTH + X];
 }
 
