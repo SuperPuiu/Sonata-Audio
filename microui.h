@@ -90,6 +90,7 @@ enum {
   MU_OPT_CLOSED       = (1 << 11),
   MU_OPT_EXPANDED     = (1 << 12),
   MU_OPT_NOBORDER     = (1 << 13),
+  MU_OPT_ANCHORED     = (1 << 14)
 };
 
 enum {
