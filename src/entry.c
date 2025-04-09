@@ -10,7 +10,7 @@
 #include "gui.h"
 
 bool Running = true;
-unsigned int FPS = 60, DefaultFPS = 60;
+unsigned int FPS = 240, DefaultFPS = 240;
 
 int main(int argc, char **argv) {
   SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_EVENTS);
@@ -92,7 +92,7 @@ int main(int argc, char **argv) {
     
     uint64_t End = SDL_GetPerformanceCounter();
     float Elapsed = (End - Start) / (float)SDL_GetPerformanceFrequency();
-    
+
     if (Elapsed > 0)
       SDL_Delay((1000 / FPS) - Elapsed);
   }
