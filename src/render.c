@@ -12,7 +12,7 @@
 
 static uint32_t Background;
 
-static mu_Rect Clip;
+static mu_Rect Clip = {0, 0, WINDOW_WIDTH, WINDOW_HEIGHT};
 static mu_Rect TextureBuffer[BUFFER_SIZE];
 static mu_Rect SourceBuffer[BUFFER_SIZE];
 static mu_Color ColorBuffer[BUFFER_SIZE]; 
@@ -56,7 +56,6 @@ static inline mu_Color BlendPixel(mu_Color Destination, mu_Color Source) {
 void r_init() {
   OpenWindow();
   Background = ColorToNumber(mu_color(33, 33, 33, 255));
-  Clip = mu_rect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
 }
 
 void FlushBuffers() {
@@ -118,7 +117,7 @@ void r_set_clip_rect(mu_Rect Rect) {
   unsigned int Height = mu_min(WINDOW_HEIGHT, Rect.y + Rect.h) - Y;
   unsigned int Width = mu_min(WINDOW_WIDTH, Rect.x + Rect.w) - X;
 
-  Clip = mu_rect(X, Y, Width, Height);
+  Clip = (mu_Rect){X, Y, Width, Height};
 }
 
 void r_draw_rect(mu_Rect Rect, mu_Color Color) {
@@ -127,7 +126,7 @@ void r_draw_rect(mu_Rect Rect, mu_Color Color) {
 
 void r_draw_text(const char *Text, mu_Vec2 Position, mu_Color Color) {
   mu_Rect Destination = {Position.x, Position.y, 0, 0};
-  
+
   for (const char *Pointer = Text; *Pointer; Pointer++) {
     if ((*Pointer & 0xc0) == 0x80) 
       continue;
@@ -137,7 +136,8 @@ void r_draw_text(const char *Text, mu_Vec2 Position, mu_Color Color) {
     Destination.w = Source.w;
     Destination.h = Source.h;
     
-    PushRectangle(Destination, Source, Color);
+    if (Destination.x <= WINDOW_WIDTH && Destination.x > 0 && Destination.y <= WINDOW_HEIGHT && Destination.y > 0)
+      PushRectangle(Destination, Source, Color);
 
     Destination.x += Destination.w;
   }
@@ -149,7 +149,7 @@ void r_draw_icon(int IconID, mu_Rect Rect, mu_Color Color) {
   unsigned int X = Rect.x + (Rect.w - Source.w) / 2;
   unsigned int Y = Rect.y + (Rect.h - Source.h) / 2;
 
-  PushRectangle(mu_rect(X, Y, Source.w, Source.h), Source, Color);
+  PushRectangle((mu_Rect){X, Y, Source.w, Source.h}, Source, Color);
 }
 
 int r_get_text_width(const char *Text, int Length) {
