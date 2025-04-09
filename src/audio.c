@@ -109,9 +109,9 @@ int AddAudio(char *Path) {
     SDL_Log("Failed to load \"%s\": %s", Path, SDL_GetError());
     return -1;
   }
-  
-  if (Mix_GetMusicTitle(Music)[0] != '\0') {
-    char *Local = (char*)Mix_GetMusicTitle(Music);
+
+  if (Mix_GetMusicTitle(l_Music)[0] != 0) {
+    char *Local = (char*)Mix_GetMusicTitle(l_Music);
 
     memset(LocalTagTitle, 0, sizeof(LocalTagTitle));
     memcpy(LocalTagTitle, Local, strlen(Local));
@@ -131,9 +131,9 @@ int AddAudio(char *Path) {
     memcpy(LocalTagTitle, LastPathPointer, strlen(LastPathPointer));
   }
   
-  TagArtist = Mix_GetMusicArtistTag(Music);
-  TagCopyright = Mix_GetMusicCopyrightTag(Music);
-  TagAlbum = Mix_GetMusicAlbumTag(Music);
+  TagArtist = Mix_GetMusicArtistTag(l_Music);
+  TagCopyright = Mix_GetMusicCopyrightTag(l_Music);
+  TagAlbum = Mix_GetMusicAlbumTag(l_Music);
   
   if (TagArtist[0] == 0) {TagArtist = "N/A";}
   if (TagCopyright[0] == 0) {TagCopyright = "N/A";}
