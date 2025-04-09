@@ -97,11 +97,11 @@ void InitializeGUI() {
   for (int i = 0; i < PAP_MAX_AUDIO; i++)
     PlaylistWidths[i] = PLAYLIST_WIDTH - 25;
   
-  PAP_Title = mu_rect(0, 0, WINDOW_WIDTH, 20);
-  PAP_Below = mu_rect(0, WINDOW_HEIGHT - BELOW_HEIGHT, WINDOW_WIDTH, BELOW_HEIGHT);
-  PAP_Playlist = mu_rect(WINDOW_WIDTH / 2 - PLAYLIST_WIDTH / 2, WINDOW_HEIGHT / 2 - PLAYLIST_HEIGHT / 2, PLAYLIST_WIDTH, PLAYLIST_HEIGHT);
-  PAP_Extra = mu_rect(0, WINDOW_HEIGHT - BELOW_HEIGHT - EXTRA_HEIGHT, WINDOW_WIDTH, EXTRA_HEIGHT);
-  PAP_InfoFrame = mu_rect(WINDOW_WIDTH / 2 - INFO_WIDTH / 2, WINDOW_HEIGHT / 2 - INFO_HEIGHT / 2, INFO_WIDTH, INFO_HEIGHT);
+  PAP_Title = (mu_Rect){0, 0, WINDOW_WIDTH, 20};
+  PAP_Below = (mu_Rect){0, WINDOW_HEIGHT - BELOW_HEIGHT, WINDOW_WIDTH, BELOW_HEIGHT};
+  PAP_Playlist = (mu_Rect){WINDOW_WIDTH / 2 - PLAYLIST_WIDTH / 2, WINDOW_HEIGHT / 2 - PLAYLIST_HEIGHT / 2, PLAYLIST_WIDTH, PLAYLIST_HEIGHT};
+  PAP_Extra = (mu_Rect){0, WINDOW_HEIGHT - BELOW_HEIGHT - EXTRA_HEIGHT, WINDOW_WIDTH, EXTRA_HEIGHT};
+  PAP_InfoFrame = (mu_Rect){WINDOW_WIDTH / 2 - INFO_WIDTH / 2, WINDOW_HEIGHT / 2 - INFO_HEIGHT / 2, INFO_WIDTH, INFO_HEIGHT};
 }
 
 void MainWindow(mu_Context *Context) {
@@ -199,7 +199,7 @@ void MainWindow(mu_Context *Context) {
         SDL_Log("Path is NULL.\n");
     }
     
-    mu_layout_set_next(Context, mu_rect(WINDOW_WIDTH / 2 - 150, 0, 300, 25), 1);
+    mu_layout_set_next(Context, (mu_Rect){WINDOW_WIDTH / 2 - 150, 0, 300, 25}, 1);
     if (mu_slider_ex(Context, &l_AudioPosition, 0, AudioDuration, 0, MU_SLIDER_FMT, MU_OPT_ALIGNCENTER)) {
       // Mix_PauseMusic();
       AudioPosition = (double)l_AudioPosition;
@@ -208,7 +208,7 @@ void MainWindow(mu_Context *Context) {
 
     l_AudioPosition = AudioPosition;
     
-    mu_layout_set_next(Context, mu_rect(WINDOW_WIDTH - 110, 0, 100, 25), 1);
+    mu_layout_set_next(Context, (mu_Rect){WINDOW_WIDTH - 110, 0, 100, 25}, 1);
     if (PAP_Slider(Context, &AudioFloat, 0, 128)) {
       AudioVolume = (int)AudioFloat;
       Mix_VolumeMusic(AudioVolume);
@@ -254,8 +254,8 @@ void MainWindow(mu_Context *Context) {
 
   /* Extra */
   if (mu_begin_window_ex(Context, "EXTRA", PAP_Extra, ExtraOpt)) {
-    mu_Rect InteractionRect = mu_rect(WINDOW_WIDTH / 2 - 105, 10, 100, 20);
-    mu_Rect LoopRect = mu_rect(InteractionRect.x + 105, InteractionRect.y, InteractionRect.w, InteractionRect.h);
+    mu_Rect InteractionRect = (mu_Rect){WINDOW_WIDTH / 2 - 105, 10, 100, 20};
+    mu_Rect LoopRect = (mu_Rect){InteractionRect.x + 105, InteractionRect.y, InteractionRect.w, InteractionRect.h};
 
     mu_layout_set_next(Context, InteractionRect, 1);
     
