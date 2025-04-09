@@ -13,6 +13,7 @@ uint32_t Buffer[WINDOW_WIDTH * WINDOW_HEIGHT];
 #define __WINDOW_FUNC__
 
 void PAP_PutPixel(int X, int Y, uint32_t PixelData) {
+  assert(Y * WINDOW_WIDTH + X <= WINDOW_WIDTH * WINDOW_HEIGHT);
   Buffer[Y * WINDOW_WIDTH + X] = PixelData;
 }
 
@@ -46,16 +47,15 @@ void OpenWindow(void) {
   l_Display = (Display *)SDL_GetPointerProperty(SDL_GetWindowProperties(MainWindow), SDL_PROP_WINDOW_X11_DISPLAY_POINTER, NULL);
   l_Window = (Window)SDL_GetNumberProperty(SDL_GetWindowProperties(MainWindow), SDL_PROP_WINDOW_X11_WINDOW_NUMBER, 0);
   l_GC = XCreateGC(l_Display, l_Window, 0, 0);
-  l_XImage = XCreateImage(l_Display, DefaultVisual(l_Display, 0), 24, ZPixmap, 0, (char*)Buffer, WINDOW_WIDTH, WINDOW_HEIGHT, 32, 0);
+  
+  XWindowAttributes Attributes = {0};
+  XGetWindowAttributes(l_Display, l_Window, &Attributes);
+  
+  l_XImage = XCreateImage(l_Display, Attributes.visual, Attributes.depth, ZPixmap, 0, (char*)Buffer, WINDOW_WIDTH, WINDOW_HEIGHT, 32, WINDOW_WIDTH * sizeof(uint32_t));
 }
 
 void RefreshWindow() {
   XPutImage(l_Display, l_Window, l_GC, l_XImage, 0, 0, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
-  XFlush(l_Display);
-}
-
-void WindowCleanup() {
-  XCloseDisplay(l_Display);
 }
 
 #else
@@ -124,9 +124,7 @@ void RefreshWindow() {
 #endif
 
 void ClearWindow(uint32_t BackgroundColor) {
-  for (int i = 0; i < WINDOW_WIDTH * WINDOW_HEIGHT; i++) {
-    Buffer[i] = BackgroundColor;
-  }
+  memset(Buffer, BackgroundColor, WINDOW_WIDTH * WINDOW_HEIGHT * sizeof(*Buffer));
 }
 
 #endif /* __WINDOW_FUNC__ */
