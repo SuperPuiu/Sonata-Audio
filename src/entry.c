@@ -24,6 +24,14 @@ int main(int argc, char **argv) {
   Context->text_width = TextWidth;
   Context->text_height = TextHeight;
 
+  if (argc > 1) {
+    AddAudio(argv[1]);
+    PlayAudio(argv[1]);
+
+    for (int i = 2; i < argc; i++)
+      AddAudio(argv[i]);
+  }
+
   while (Running) {
     uint64_t Start = SDL_GetPerformanceCounter();
 
