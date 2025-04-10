@@ -22,7 +22,7 @@ static int BelowOpt = MU_OPT_NORESIZE | MU_OPT_NOSCROLL | MU_OPT_NOCLOSE | MU_OP
 static int PlaylistOpt = MU_OPT_NOCLOSE | MU_OPT_NOTITLE | MU_OPT_NOBORDER | MU_OPT_NOINTERACT;
 static int ExtraOpt = MU_OPT_NOCLOSE | MU_OPT_NOTITLE | MU_OPT_NOFRAME | MU_OPT_NOSCROLL;
 static int InfoFrameOpt = 0;
-static int SelectedAudio;
+static int SelectedAudio = -1;
 
 float l_AudioPosition;
 static float AudioFloat = MIX_MAX_VOLUME;
@@ -39,18 +39,25 @@ static const char *InteractButtonText = "Pause";
 static const char *LoopButtonText = "No loop";
 
 int TextWidth(mu_Font font, const char *text, int len) {
+  unused(font);
+
   if (len == -1) { len = strlen(text); }
   return r_get_text_width(text, len);
 }
 
 int TextHeight(mu_Font font) {
+  unused(font);
+
   return r_get_text_height();
 }
 
 int PAP_AudioButton(mu_Context *Context, const char *Name, int AudioID) {
   mu_Id ButtonID = mu_get_id(Context, Name, sizeof(Name));
-  mu_Rect Rect = mu_layout_next(Context);
   
+  mu_Rect Rect = mu_layout_next(Context);
+  mu_Rect MainRect = {Rect.x + 20, Rect.y, Rect.w - 20, Rect.h};
+  mu_Rect Slider = {Rect.x, Rect.y, 15, Rect.h}; /* Might need a better name for this variable */
+
   mu_update_control(Context, ButtonID, Rect, 0);
 
   int Result = 0;
@@ -64,8 +71,9 @@ int PAP_AudioButton(mu_Context *Context, const char *Name, int AudioID) {
     Result |= MU_RES_CHANGE;
   }
   
-  mu_draw_control_frame(Context, ButtonID, Rect, AudioCurrentIndex != AudioID ? MU_COLOR_BUTTON : MU_COLOR_BASE, MU_OPT_NOBORDER); /* Main button frame */
-  mu_draw_control_text(Context, Name, Rect, MU_COLOR_TEXT, 0);
+  mu_draw_control_frame(Context, ButtonID, Slider, MU_COLOR_BUTTON, MU_OPT_NOBORDER);
+  mu_draw_control_frame(Context, ButtonID, MainRect, AudioCurrentIndex != AudioID ? MU_COLOR_BUTTON : MU_COLOR_BASE, MU_OPT_NOBORDER); /* Main button frame */
+  mu_draw_control_text(Context, Name, MainRect, MU_COLOR_TEXT, 0);
   // mu_draw_control_text();
 
   return Result;
@@ -220,6 +228,7 @@ void MainWindow(mu_Context *Context) {
   /* Playlist */
   if (mu_begin_window_ex(Context, "Playlist", PAP_Playlist, PlaylistOpt)) {
     mu_Container *Container = mu_get_container(Context, "Menu");
+    if (SelectedAudio == -1) {Container->open = 0;}
 
     for (int i = 0; i < PAP_MAX_AUDIO; i++) {
       if (Audio[i].Path[0] == 0)
@@ -231,9 +240,6 @@ void MainWindow(mu_Context *Context) {
       PAP_AudioButton(Context, Audio[i].Title, i);
     }
     
-    if (Audio[0].Path[0] == 0)
-      Container->open = 0;
-
     if (mu_begin_popup(Context, "Menu")) {
       if (mu_button(Context, "Remove")) {
         AudioRemove(SelectedAudio);
