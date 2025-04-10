@@ -29,6 +29,8 @@
 #define mu_max(a, b)            ((a) > (b) ? (a) : (b))
 #define mu_clamp(x, a, b)       mu_min(b, mu_max(a, x))
 
+#define unused(x)               ((void) (x))
+
 enum {
   MU_CLIP_PART = 1,
   MU_CLIP_ALL
