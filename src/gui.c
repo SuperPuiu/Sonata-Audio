@@ -13,6 +13,7 @@
 #include <SDL3/SDL_mixer.h>
 #endif
 
+#include <stdlib.h>
 #include <string.h>
 
 int LoopStatus = LOOP_NONE;
@@ -21,8 +22,10 @@ static int TitleOpt = MU_OPT_NORESIZE | MU_OPT_NOSCROLL | MU_OPT_NOFRAME | MU_OP
 static int BelowOpt = MU_OPT_NORESIZE | MU_OPT_NOSCROLL | MU_OPT_NOCLOSE | MU_OPT_NOTITLE | MU_OPT_NOFRAME;
 static int PlaylistOpt = MU_OPT_NOCLOSE | MU_OPT_NOTITLE | MU_OPT_NOBORDER | MU_OPT_NOINTERACT;
 static int ExtraOpt = MU_OPT_NOCLOSE | MU_OPT_NOTITLE | MU_OPT_NOFRAME | MU_OPT_NOSCROLL;
+
 static int InfoFrameOpt = 0;
 static int SelectedAudio = -1;
+static int SlidingAudio = -1;
 
 float l_AudioPosition;
 static float AudioFloat = MIX_MAX_VOLUME;
@@ -51,6 +54,15 @@ int TextHeight(mu_Font font) {
   return r_get_text_height();
 }
 
+int PAP_GetAudioByOrder(uint8_t RequestedOrder) {
+  for (int i = 0; i < PAP_MAX_AUDIO; i++) {
+    if (Audio[i].LayoutOrder == RequestedOrder)
+      return i;
+  }
+
+  return -1;
+}
+
 int PAP_AudioButton(mu_Context *Context, const char *Name, int AudioID) {
   mu_Id ButtonID = mu_get_id(Context, Name, sizeof(Name));
   
@@ -58,7 +70,7 @@ int PAP_AudioButton(mu_Context *Context, const char *Name, int AudioID) {
   mu_Rect MainRect = {Rect.x + 20, Rect.y, Rect.w - 20, Rect.h};
   mu_Rect Slider = {Rect.x, Rect.y, 15, Rect.h}; /* Might need a better name for this variable */
 
-  mu_update_control(Context, ButtonID, Rect, 0);
+  mu_update_control(Context, ButtonID, MainRect, 0);
 
   int Result = 0;
   
@@ -69,6 +81,34 @@ int PAP_AudioButton(mu_Context *Context, const char *Name, int AudioID) {
     mu_open_popup(Context, "Menu");
     SelectedAudio = AudioID;
     Result |= MU_RES_CHANGE;
+  } else if (Context->mouse_pressed == MU_MOUSE_LEFT && mu_mouse_over(Context, Slider)) {
+    SlidingAudio = AudioID;
+  } else if (Context->mouse_down != MU_MOUSE_LEFT && AudioID == SlidingAudio) {
+    SlidingAudio = -1;
+  }
+
+  if (SlidingAudio == AudioID) {
+    int UpperAudio = PAP_GetAudioByOrder(Audio[AudioID].LayoutOrder + 1);
+    int LowerAudio = PAP_GetAudioByOrder(Audio[AudioID].LayoutOrder - 1);
+
+    /*if (l_Audio > -1) {
+      Audio[AudioID].LayoutOrder += 1;
+      Audio[l_Audio].LayoutOrder -= 1;
+    }*/
+
+    if (LowerAudio > -1) {
+      if (mu_mouse_over(Context, (mu_Rect){Slider.x, Slider.y - Slider.h - 5, Slider.w, Slider.h})) {
+        Audio[AudioID].LayoutOrder -= 1;
+        Audio[LowerAudio].LayoutOrder += 1;
+      }
+    }
+
+    if (UpperAudio > -1) {
+      if (mu_mouse_over(Context, (mu_Rect){Slider.x, Slider.y + Slider.h + 5, Slider.w, Slider.h})) {
+        Audio[AudioID].LayoutOrder += 1;
+        Audio[UpperAudio].LayoutOrder -= 1;
+      }
+    }
   }
   
   mu_draw_control_frame(Context, ButtonID, Slider, MU_COLOR_BUTTON, MU_OPT_NOBORDER);
@@ -229,15 +269,28 @@ void MainWindow(mu_Context *Context) {
   if (mu_begin_window_ex(Context, "Playlist", PAP_Playlist, PlaylistOpt)) {
     mu_Container *Container = mu_get_container(Context, "Menu");
     if (SelectedAudio == -1) {Container->open = 0;}
+    
+    AudioData l_Audio[PAP_MAX_AUDIO];
+    uint8_t l_AudioIDs[PAP_MAX_AUDIO];
+
+    memset(l_Audio, 0, sizeof(AudioData) * PAP_MAX_AUDIO);
+    memset(l_AudioIDs, 0, sizeof(uint8_t) * PAP_MAX_AUDIO);
 
     for (int i = 0; i < PAP_MAX_AUDIO; i++) {
-      if (Audio[i].Path[0] == 0)
+      if (Audio[i].Path[0] != 0) {
+        l_Audio[Audio[i].LayoutOrder] = Audio[i];
+        l_AudioIDs[Audio[i].LayoutOrder] = i;
+      }
+    }
+
+    for (int i = 0; i < PAP_MAX_AUDIO; i++) {
+      if (l_Audio[i].Path[0] == 0)
         continue;
 
       mu_layout_row(Context, 0, NULL, 25);
       mu_layout_width(Context, PLAYLIST_WIDTH - 25);
 
-      PAP_AudioButton(Context, Audio[i].Title, i);
+      PAP_AudioButton(Context, l_Audio[i].Title, l_AudioIDs[i]);
     }
     
     if (mu_begin_popup(Context, "Menu")) {

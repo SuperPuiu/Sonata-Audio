@@ -54,6 +54,16 @@ void InitializeAudio() {
 
 void AudioRemove(int Index) {
   memset(&Audio[Index], 0, sizeof(AudioData));
+
+  if (Index == PAP_MAX_AUDIO || Audio[Index].Path[0] == 0)
+    return;
+
+  for (int i = Index + 1; i < PAP_MAX_AUDIO; i++) {
+    if (Audio[Index].Path[0] == 0)
+      continue;
+
+    Audio[Index].LayoutOrder -= 1;
+  }
 }
 
 int GetEmptyIndex() {
@@ -66,11 +76,8 @@ int GetEmptyIndex() {
 int GetNextIndex(int Index) {
   if (Index > PAP_MAX_AUDIO || Index + 1 > PAP_MAX_AUDIO)
     return 0;
-
-  if (Audio[Index + 1].Path[0] == 0)
-    return 0;
-  else
-    return Index + 1;
+  
+  return Audio[Index + 1].Path[0] == 0 ? 0 : Index + 1;
 }
 
 int GetAudioIndex(char *Path) {
@@ -144,6 +151,8 @@ int AddAudio(char *Path) {
   memcpy(Audio[Index].TagArtist, TagArtist, strlen(TagArtist));
   memcpy(Audio[Index].TagAlbum, TagAlbum, strlen(TagAlbum));
   memcpy(Audio[Index].TagCopyright, TagCopyright, strlen(TagCopyright));
+  
+  Audio[Index].LayoutOrder = Index;
 
   Mix_FreeMusic(l_Music);
   return Index;

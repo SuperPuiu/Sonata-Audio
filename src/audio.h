@@ -3,6 +3,8 @@
 
 #define PAP_MAX_AUDIO 256
 
+#include <stdint.h>
+
 #ifndef WINDOWS
 #include <linux/limits.h>
 #else
@@ -16,6 +18,8 @@ typedef struct {
   char TagArtist[128];
   char TagCopyright[128];
   char TagAlbum[128];
+
+  uint8_t LayoutOrder;
 } AudioData;
 
 extern AudioData Audio[];
