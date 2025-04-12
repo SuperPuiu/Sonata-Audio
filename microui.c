@@ -1103,7 +1103,7 @@ int mu_begin_window_ex(mu_Context *ctx, const char *title, mu_Rect rect, int opt
     /* do title text */
     if (~opt & MU_OPT_NOTITLE) {
       mu_Id l_id = mu_get_id(ctx, "!title", 6);
-      mu_update_control(ctx, id, tr, opt);
+      mu_update_control(ctx, l_id, tr, opt);
       mu_draw_control_text(ctx, title, tr, MU_COLOR_TITLETEXT, opt);
       if (l_id == ctx->focus && ctx->mouse_down == MU_MOUSE_LEFT && ~opt & MU_OPT_ANCHORED) {
         cnt->rect.x += ctx->mouse_delta.x;
@@ -1119,7 +1119,7 @@ int mu_begin_window_ex(mu_Context *ctx, const char *title, mu_Rect rect, int opt
       mu_Rect r = mu_rect(tr.x + tr.w - tr.h, tr.y, tr.h, tr.h);
       tr.w -= r.w;
       mu_draw_icon(ctx, MU_ICON_CLOSE, r, ctx->style->colors[MU_COLOR_TITLETEXT]);
-      mu_update_control(ctx, id, r, opt);
+      mu_update_control(ctx, l_id, r, opt);
       if (ctx->mouse_pressed == MU_MOUSE_LEFT && l_id == ctx->focus) {
         cnt->open = 0;
       }
@@ -1134,7 +1134,7 @@ int mu_begin_window_ex(mu_Context *ctx, const char *title, mu_Rect rect, int opt
     mu_Id l_id = mu_get_id(ctx, "!resize", 7);
     mu_Rect r = mu_rect(rect.x + rect.w - sz, rect.y + rect.h - sz, sz, sz);
     mu_update_control(ctx, l_id, r, opt);
-    if (id == ctx->focus && ctx->mouse_down == MU_MOUSE_LEFT) {
+    if (l_id == ctx->focus && ctx->mouse_down == MU_MOUSE_LEFT) {
       cnt->rect.w = mu_max(96, cnt->rect.w + ctx->mouse_delta.x);
       cnt->rect.h = mu_max(64, cnt->rect.h + ctx->mouse_delta.y);
     }
