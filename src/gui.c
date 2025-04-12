@@ -13,7 +13,6 @@
 #include <SDL3/SDL_mixer.h>
 #endif
 
-#include <stdlib.h>
 #include <string.h>
 
 int LoopStatus = LOOP_NONE;
