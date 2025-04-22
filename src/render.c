@@ -81,7 +81,7 @@ void FlushBuffers() {
             uint8_t TextureColor = GetAtlasColor(Texture, CurrentX - Source->x, CurrentY - Source->y);
             if (TextureColor > 0x00) {
               uint32_t CurrentPixel = PAP_GetPixel(CurrentX, CurrentY);
-              mu_Color Color = {TextureColor, TextureColor, TextureColor, 255};
+              mu_Color Color = {ColorBuffer[i].r, ColorBuffer[i].g, ColorBuffer[i].b, TextureColor};
               PAP_PutPixel(CurrentX, CurrentY, ColorToNumber(BlendPixel(NumberToColor(CurrentPixel), Color)));
             }
           }
