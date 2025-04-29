@@ -25,11 +25,11 @@ int main(int argc, char **argv) {
   Context->text_height = TextHeight;
 
   if (argc > 1) {
-    AddAudio(argv[1]);
+    AddAudio(argv[1], NULL);
     PlayAudio(argv[1]);
 
     for (int i = 2; i < argc; i++)
-      AddAudio(argv[i]);
+      AddAudio(argv[i], NULL);
   }
 
   while (Running) {
@@ -101,7 +101,7 @@ int main(int argc, char **argv) {
     uint64_t End = SDL_GetPerformanceCounter();
     float Elapsed = (End - Start) / (float)SDL_GetPerformanceFrequency();
 
-    if (Elapsed > 0)
+    if (Elapsed > 0 && ((1000 / FPS) - Elapsed) > 0)
       SDL_Delay((1000 / FPS) - Elapsed);
   }
 
