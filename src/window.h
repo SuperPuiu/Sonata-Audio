@@ -87,7 +87,7 @@ LRESULT CALLBACK CustomRedrawWindow(HWND l_HWND, UINT Message, WPARAM l_WPARAM, 
     HDC MEMDC = CreateCompatibleDC(l_HDC);
     HBITMAP l_HBITMAP = CreateCompatibleBitmap(l_HDC, WINDOW_WIDTH, WINDOW_HEIGHT);
     HBITMAP OLD_BMP = SelectObject(MEMDC, l_HBITMAP);
-    INFO l_INFO = {{sizeof(l_INFO), WINDOW_WIDTH, -WINDOW_HEIGHT, 1, 32, BI_BITFIELDS}};
+    INFO l_INFO = {.Header = {sizeof(l_INFO), WINDOW_WIDTH, -WINDOW_HEIGHT, 1, 32, BI_BITFIELDS}};
 
     l_INFO.Colors[0].rgbRed = 0xff;
     l_INFO.Colors[1].rgbGreen = 0xff;
