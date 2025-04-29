@@ -19,6 +19,8 @@ typedef struct {
   char TagCopyright[128];
   char TagAlbum[128];
 
+  char AssignedList[128];
+
   uint8_t LayoutOrder;
 } AudioData;
 
@@ -30,7 +32,7 @@ extern int AudioCurrentIndex;
 void AudioRemove(int Index);
 void UpdateAudioPosition();
 void InitializeAudio();
-int AddAudio(char *Path);
+int AddAudio(char *Path, char *Category);
 double PlayAudio(char *Path);
 
 #endif

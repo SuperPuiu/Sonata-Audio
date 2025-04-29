@@ -95,9 +95,11 @@ int GetAudioIndex(char *Path) {
   return -1;
 }
 
-int AddAudio(char *Path) {
+int AddAudio(char *Path, char *Category) {
   if (GetAudioIndex(Path) != -1)
     return -1;
+  
+  Category = Category == NULL ? "All" : Category;
 
   int Index = GetEmptyIndex();
   Mix_Music *l_Music;
@@ -189,7 +191,7 @@ double PlayAudio(char *Path) {
   int Index = GetAudioIndex(Path);
 
   if (Index == -1)
-    Index = AddAudio(Path);
+    Index = AddAudio(Path, NULL);
   
   if (Music != NULL) {
     Mix_FreeMusic(Music);
