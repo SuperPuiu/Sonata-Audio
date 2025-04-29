@@ -13,6 +13,7 @@
 #include <SDL3/SDL_mixer.h>
 #endif
 
+#include <stdio.h>
 #include <string.h>
 
 int LoopStatus = LOOP_NONE;
@@ -21,7 +22,7 @@ static int TitleOpt     = MU_OPT_NORESIZE | MU_OPT_NOSCROLL | MU_OPT_NOFRAME | M
 static int BelowOpt     = MU_OPT_NORESIZE | MU_OPT_NOSCROLL | MU_OPT_NOCLOSE | MU_OPT_NOTITLE | MU_OPT_NOFRAME;
 static int PlaylistOpt  = MU_OPT_NOTITLE | MU_OPT_NOBORDER | MU_OPT_NOINTERACT;
 static int ExtraOpt     = MU_OPT_NOTITLE | MU_OPT_NOFRAME | MU_OPT_NOSCROLL;
-static int DirsOpt      = MU_OPT_NOTITLE | MU_OPT_NOBORDER;
+static int CategoryOpt  = MU_OPT_NOTITLE | MU_OPT_NOBORDER | MU_OPT_NOINTERACT;
 
 static int PopupOpt = 0;
 static int InfoFrameOpt = 0;
@@ -35,9 +36,11 @@ static bool InfoOpen = false, PopupOpen = false;
 
 static mu_Rect PAP_Title, PAP_Below;
 static mu_Rect PAP_Extra, PAP_Playlist;
-static mu_Rect PAP_InfoFrame, PAP_Dirs;
+static mu_Rect PAP_InfoFrame, PAP_Category;
 static mu_Rect PAP_Popup;
 
+char *CurrentCategory = "All";
+char Categories[PAP_MAX_CATEGORIES][128];
 static const char *InteractButtonText = "Pause";
 static const char *LoopButtonText = "No loop";
 
@@ -70,7 +73,7 @@ void FuncRemoveAudio() {
 }
 
 int PAP_AudioButton(mu_Context *Context, const char *Name, int AudioID) {
-  mu_Id ButtonID = mu_get_id(Context, Name, sizeof(Name));
+  mu_Id ButtonID = mu_get_id(Context, &AudioID, sizeof(AudioID));
   
   mu_Rect Rect = mu_layout_next(Context);
   mu_Rect MainRect = {Rect.x + 20, Rect.y, Rect.w - 20, Rect.h};
@@ -80,10 +83,10 @@ int PAP_AudioButton(mu_Context *Context, const char *Name, int AudioID) {
 
   int Result = 0;
   
-  if (Context->mouse_pressed == MU_MOUSE_LEFT && Context->focus == ButtonID) {
+  if (Context->mouse_pressed == MU_MOUSE_LEFT && mu_mouse_over(Context, MainRect)) {
     PlayAudio(Audio[AudioID].Path);
     Result |= MU_RES_CHANGE;
-  } else if (Context->mouse_pressed == MU_MOUSE_RIGHT && Context->focus == ButtonID && AudioID != AudioCurrentIndex) {
+  } else if (Context->mouse_pressed == MU_MOUSE_RIGHT && mu_mouse_over(Context, MainRect) && AudioID != AudioCurrentIndex) {
     mu_open_popup(Context, "Menu");
     SelectedAudio = AudioID;
     Result |= MU_RES_CHANGE;
@@ -151,7 +154,7 @@ void InitializeGUI() {
   PAP_Playlist = (mu_Rect){WINDOW_WIDTH / 2 - PLAYLIST_WIDTH / 2, WINDOW_HEIGHT / 2 - PLAYLIST_HEIGHT / 2, PLAYLIST_WIDTH, PLAYLIST_HEIGHT};
   PAP_Extra = (mu_Rect){0, WINDOW_HEIGHT - BELOW_HEIGHT - EXTRA_HEIGHT, WINDOW_WIDTH, EXTRA_HEIGHT};
   PAP_InfoFrame = (mu_Rect){WINDOW_WIDTH / 2 - INFO_WIDTH / 2, WINDOW_HEIGHT / 2 - INFO_HEIGHT / 2, INFO_WIDTH, INFO_HEIGHT};
-  PAP_Dirs = (mu_Rect){PAP_Playlist.x, PAP_Playlist.y - DIRS_LIST_HEIGHT - 3, DIRS_LIST_WIDTH, DIRS_LIST_HEIGHT};
+  PAP_Category = (mu_Rect){PAP_Playlist.x, PAP_Playlist.y - CATEGORY_HEIGHT - 3, CATEGORY_WIDTH, CATEGORY_HEIGHT};
   PAP_Popup = (mu_Rect){WINDOW_WIDTH / 2 - POPUP_WIDTH / 2, WINDOW_HEIGHT / 2 - POPUP_HEIGHT / 2, POPUP_WIDTH, POPUP_HEIGHT};
 }
 
@@ -206,7 +209,7 @@ void MainWindow(mu_Context *Context) {
             }
 
             if (S_ISREG(Stats.st_mode) != 0)
-              AddAudio(FullPath);
+              AddAudio(FullPath, CurrentCategory);
           }
 
           closedir(Directory);
@@ -234,7 +237,7 @@ void MainWindow(mu_Context *Context) {
               strcat(AudioPath, "\\");
               strcat(AudioPath, FileData.cFileName);
 
-              AddAudio(AudioPath);
+              AddAudio(AudioPath, NULL);
             }
           } while (FindNextFile(HandleFind, &FileData) != 0);
         } else {
@@ -248,7 +251,7 @@ void MainWindow(mu_Context *Context) {
       const char *Path = OpenDialogue(PFD_FILE);
 
       if (Path)
-        AddAudio((char *)Path);
+        AddAudio((char *)Path, CurrentCategory);
       else
         SDL_Log("Path is NULL.\n");
     }
@@ -320,9 +323,41 @@ void MainWindow(mu_Context *Context) {
   }
   
   /* Directories */
-  if (mu_begin_window_ex(Context, "DIRS", PAP_Dirs, DirsOpt)) {
+  if (mu_begin_window_ex(Context, "CATEGORIES", PAP_Category, CategoryOpt)) { 
+    int l_Widths[PAP_MAX_CATEGORIES];
+    static uint8_t TotalCategoryButtons = 2;
+    
+    for (uint8_t i = 0; i < TotalCategoryButtons - 1; i++)
+      l_Widths[i] = 70;
+    
+    l_Widths[TotalCategoryButtons - 1] = 20;
+    
+    mu_layout_row(Context, TotalCategoryButtons, l_Widths, TotalCategoryButtons < 8 ? 20 : 15);
     if (mu_button(Context, "All")) {
 
+    }
+    
+    for (uint8_t i = 0; i < PAP_MAX_CATEGORIES; i++) {
+      if (Categories[i][0] == 0)
+        continue;
+       
+      if (mu_button(Context, Categories[i])) {
+        
+      }
+    }
+    
+    if (mu_button(Context, "+")) {
+      for (uint8_t i = 0; i < PAP_MAX_CATEGORIES; i++) {
+        if (Categories[i][0] == 0) {
+          char Buf[5];
+          
+          TotalCategoryButtons += 1;
+          sprintf(Buf, "%u", i); /* me when itoa doesn't want to compile */
+          memcpy(Categories[i], "Category ", 9);
+          memcpy(Categories[i] + 9, Buf, strlen(Buf));
+          break;
+        }
+      } 
     }
 
     mu_end_window(Context);
