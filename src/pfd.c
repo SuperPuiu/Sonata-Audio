@@ -29,8 +29,11 @@ const char *OpenDialogue(enum DialogueOption Option) {
   
   if (Length > 0) {
     ResultBuffer[Length - 1] = '\0';
+    pclose(FilePointer);
     return ResultBuffer;
   }
+  
+  pclose(FilePointer);
 
   return NULL;
 }
