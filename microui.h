@@ -31,6 +31,8 @@
 
 #define unused(x)               ((void) (x))
 
+#include <stdint.h>
+
 enum {
   MU_CLIP_PART = 1,
   MU_CLIP_ALL
@@ -164,12 +166,12 @@ typedef struct {
 typedef struct {
   mu_Font font;
   mu_Vec2 size;
-  int padding;
-  int spacing;
-  int indent;
-  int title_height;
-  int scrollbar_size;
-  int thumb_size;
+  uint8_t padding;
+  uint8_t spacing;
+  uint8_t indent;
+  uint8_t title_height;
+  uint8_t scrollbar_size;
+  uint8_t thumb_size;
   mu_Color colors[MU_COLOR_MAX];
 } mu_Style;
 

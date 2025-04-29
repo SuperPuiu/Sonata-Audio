@@ -49,9 +49,9 @@ static mu_Rect unclipped_rect = { 0, 0, 0x1000000, 0x1000000 };
 
 static mu_Style default_style = {
   /* font | size | padding | spacing | indent */
-  NULL, { 68, 10 }, 5, 4, 24,
+  .font = NULL, .size = { 68, 10 }, .padding = 5, .spacing = 4, .indent = 24,
   /* title_height | scrollbar_size | thumb_size */
-  24, 12, 8,
+  .title_height = 24, .scrollbar_size = 6, .thumb_size = 6,
   {
     { 230, 230, 230, 255 }, /* MU_COLOR_TEXT */
     { 25,  25,  25,  255 }, /* MU_COLOR_BORDER */
