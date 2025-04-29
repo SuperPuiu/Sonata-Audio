@@ -17,11 +17,13 @@
 
 int LoopStatus = LOOP_NONE;
 static int PlaylistWidths[PAP_MAX_AUDIO];
-static int TitleOpt = MU_OPT_NORESIZE | MU_OPT_NOSCROLL | MU_OPT_NOFRAME | MU_OPT_ANCHORED;
-static int BelowOpt = MU_OPT_NORESIZE | MU_OPT_NOSCROLL | MU_OPT_NOCLOSE | MU_OPT_NOTITLE | MU_OPT_NOFRAME;
-static int PlaylistOpt = MU_OPT_NOCLOSE | MU_OPT_NOTITLE | MU_OPT_NOBORDER | MU_OPT_NOINTERACT;
-static int ExtraOpt = MU_OPT_NOCLOSE | MU_OPT_NOTITLE | MU_OPT_NOFRAME | MU_OPT_NOSCROLL;
+static int TitleOpt     = MU_OPT_NORESIZE | MU_OPT_NOSCROLL | MU_OPT_NOFRAME | MU_OPT_ANCHORED;
+static int BelowOpt     = MU_OPT_NORESIZE | MU_OPT_NOSCROLL | MU_OPT_NOCLOSE | MU_OPT_NOTITLE | MU_OPT_NOFRAME;
+static int PlaylistOpt  = MU_OPT_NOTITLE | MU_OPT_NOBORDER | MU_OPT_NOINTERACT;
+static int ExtraOpt     = MU_OPT_NOTITLE | MU_OPT_NOFRAME | MU_OPT_NOSCROLL;
+static int DirsOpt      = MU_OPT_NOTITLE | MU_OPT_NOBORDER;
 
+static int PopupOpt = 0;
 static int InfoFrameOpt = 0;
 static int SelectedAudio = -1;
 static int SlidingAudio = -1;
@@ -29,16 +31,17 @@ static int SlidingAudio = -1;
 float l_AudioPosition;
 static float AudioFloat = MIX_MAX_VOLUME;
 
-static bool InfoOpen = false;
+static bool InfoOpen = false, PopupOpen = false;
 
-static mu_Rect PAP_Title;
-static mu_Rect PAP_Below;
-static mu_Rect PAP_Extra;
-static mu_Rect PAP_Playlist;
-static mu_Rect PAP_InfoFrame;
+static mu_Rect PAP_Title, PAP_Below;
+static mu_Rect PAP_Extra, PAP_Playlist;
+static mu_Rect PAP_InfoFrame, PAP_Dirs;
+static mu_Rect PAP_Popup;
 
 static const char *InteractButtonText = "Pause";
 static const char *LoopButtonText = "No loop";
+
+void (*PopupAction)(void);
 
 int TextWidth(mu_Font font, const char *text, int len) {
   unused(font);
@@ -60,6 +63,10 @@ int PAP_GetAudioByOrder(uint8_t RequestedOrder) {
   }
 
   return -1;
+}
+
+void FuncRemoveAudio() {
+  AudioRemove(SelectedAudio);
 }
 
 int PAP_AudioButton(mu_Context *Context, const char *Name, int AudioID) {
@@ -89,11 +96,6 @@ int PAP_AudioButton(mu_Context *Context, const char *Name, int AudioID) {
   if (SlidingAudio == AudioID) {
     int UpperAudio = PAP_GetAudioByOrder(Audio[AudioID].LayoutOrder + 1);
     int LowerAudio = PAP_GetAudioByOrder(Audio[AudioID].LayoutOrder - 1);
-
-    /*if (l_Audio > -1) {
-      Audio[AudioID].LayoutOrder += 1;
-      Audio[l_Audio].LayoutOrder -= 1;
-    }*/
 
     if (LowerAudio > -1) {
       if (mu_mouse_over(Context, (mu_Rect){Slider.x, Slider.y - Slider.h - 5, Slider.w, Slider.h})) {
@@ -149,11 +151,16 @@ void InitializeGUI() {
   PAP_Playlist = (mu_Rect){WINDOW_WIDTH / 2 - PLAYLIST_WIDTH / 2, WINDOW_HEIGHT / 2 - PLAYLIST_HEIGHT / 2, PLAYLIST_WIDTH, PLAYLIST_HEIGHT};
   PAP_Extra = (mu_Rect){0, WINDOW_HEIGHT - BELOW_HEIGHT - EXTRA_HEIGHT, WINDOW_WIDTH, EXTRA_HEIGHT};
   PAP_InfoFrame = (mu_Rect){WINDOW_WIDTH / 2 - INFO_WIDTH / 2, WINDOW_HEIGHT / 2 - INFO_HEIGHT / 2, INFO_WIDTH, INFO_HEIGHT};
+  PAP_Dirs = (mu_Rect){PAP_Playlist.x, PAP_Playlist.y - DIRS_LIST_HEIGHT - 3, DIRS_LIST_WIDTH, DIRS_LIST_HEIGHT};
+  PAP_Popup = (mu_Rect){WINDOW_WIDTH / 2 - POPUP_WIDTH / 2, WINDOW_HEIGHT / 2 - POPUP_HEIGHT / 2, POPUP_WIDTH, POPUP_HEIGHT};
 }
 
 void MainWindow(mu_Context *Context) {
   mu_Container *InfoContainer = mu_get_container(Context, "INFO");
+  mu_Container *PopupContainer = mu_get_container(Context, "POPUP");
+
   if (!InfoContainer->open) {InfoOpen = false;}
+  if (!PopupContainer->open) {PopupOpen = false;}
 
   /* Title */
   if (mu_begin_window_ex(Context, "Puius Audio Player", PAP_Title, TitleOpt)) {
@@ -294,7 +301,9 @@ void MainWindow(mu_Context *Context) {
     
     if (mu_begin_popup(Context, "Menu")) {
       if (mu_button(Context, "Remove")) {
-        AudioRemove(SelectedAudio);
+        PopupAction = FuncRemoveAudio;
+        PopupOpen = true;
+        PopupContainer->open = 1;
         Container->open = 0;
       }
 
@@ -307,6 +316,15 @@ void MainWindow(mu_Context *Context) {
       mu_end_popup(Context);
     }
     
+    mu_end_window(Context);
+  }
+  
+  /* Directories */
+  if (mu_begin_window_ex(Context, "DIRS", PAP_Dirs, DirsOpt)) {
+    if (mu_button(Context, "All")) {
+
+    }
+
     mu_end_window(Context);
   }
 
@@ -345,9 +363,39 @@ void MainWindow(mu_Context *Context) {
     mu_end_window(Context);
   }
   
+  PopupContainer->open = PopupOpen;
+  PopupContainer->zindex = 3;
+
+  /* Popup */
+  if (mu_begin_window_ex(Context, "POPUP", PAP_Popup, PopupOpt)) {
+    Context->hover_root = Context->next_hover_root = PopupContainer;
+    mu_bring_to_front(Context, PopupContainer);
+
+    mu_Rect l_Rect = PopupContainer->rect;
+    
+    mu_layout_row(Context, 1, (int[]){l_Rect.w - 15}, 25);
+    mu_label(Context, "Proceed with the action?");
+    
+    mu_layout_set_next(Context, (mu_Rect){(l_Rect.x + l_Rect.w / 2) - 105, l_Rect.y + l_Rect.h - 25, 100, 20}, 0);
+
+    if (mu_button_ex(Context, "Continue", 0, MU_OPT_ALIGNCENTER)) {
+      PopupContainer->open = 0;
+      PopupAction();
+    }
+
+    mu_layout_set_next(Context, (mu_Rect){(l_Rect.x + l_Rect.w / 2), l_Rect.y + l_Rect.h - 25, 100, 20}, 0);
+    
+    if (mu_button_ex(Context, "Abort", 0, MU_OPT_ALIGNCENTER)) {
+      PopupContainer->open = 0;
+    }
+
+    mu_end_window(Context);
+  }
+
   InfoContainer->open = InfoOpen;
   InfoContainer->zindex = 2;
-
+  
+  /* INFO */
   if (mu_begin_window_ex(Context, "INFO", PAP_InfoFrame, InfoFrameOpt)) {
     Context->hover_root = Context->next_hover_root = InfoContainer;
     mu_bring_to_front(Context, InfoContainer);
@@ -369,7 +417,6 @@ void MainWindow(mu_Context *Context) {
     memcpy(AlbumBuf + 7, Audio[SelectedAudio].TagAlbum, strlen(Audio[SelectedAudio].TagAlbum));
     
     /* Columns hate me */
-    
     mu_layout_row(Context, 1, (int[]){INFO_WIDTH - 25}, 25);
     mu_label(Context, ArtistBuf);
 
