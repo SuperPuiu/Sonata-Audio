@@ -5,7 +5,7 @@ buildTest:
 	mkdir -p bin
 	gcc $(SOURCES) microui.c $(CFLAGS) -g -ggdb3 -lX11 -o bin/PuiusAudioPlayer_Linux
 
-buildLinux:
+linux:
 	mkdir -p bin
 	gcc $(SOURCES) microui.c $(CFLAGS) -o3 -lX11 -o bin/PuiusAudioPlayer_Linux
 

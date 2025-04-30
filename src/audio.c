@@ -25,20 +25,16 @@ AudioData Audio[PAP_MAX_AUDIO];
 
 bool LoopLock = false; /* Used by LOOP_ALL functionality */
 
-int AudioCurrentIndex = -1;
-int AudioVolume = MIX_MAX_VOLUME;
+int AudioVolume = MIX_MAX_VOLUME, AudioCurrentIndex = -1;
 
 static Mix_Music *Music;
 
-double AudioDuration, AudioPosition;
+double AudioDuration = 0, AudioPosition = 0;
 static double LoopStart, LoopEnd, LoopLength;
 
 char *AudioCurrentPath = NULL;
 
 void InitializeAudio() {
-  AudioPosition = 0;
-  AudioDuration = 0;
-
   if (!Mix_OpenAudio(0, &Specifications)) {
     SDL_Log("Couldn't open audio %s\n", SDL_GetError());
     exit(EXIT_FAILURE);
@@ -74,10 +70,12 @@ int GetEmptyIndex() {
 }
 
 int GetNextIndex(int Index) {
-  if (Index > PAP_MAX_AUDIO || Index + 1 > PAP_MAX_AUDIO)
-    return 0;
-  
-  return Audio[Index + 1].Path[0] == 0 ? 0 : Index + 1;
+  for (int i = (Index > PAP_MAX_AUDIO || Index + 1 > PAP_MAX_AUDIO) ? 0 : Index + 1; i < PAP_MAX_AUDIO; i++) {
+    if (strcmp(Audio[Index].AssignedList, Audio[i].AssignedList) == 0)
+      return i;
+  }
+
+  return 0; /* Fallback return */
 }
 
 int GetAudioIndex(char *Path) {
@@ -153,6 +151,7 @@ int AddAudio(char *Path, char *Category) {
   memcpy(Audio[Index].TagArtist, TagArtist, strlen(TagArtist));
   memcpy(Audio[Index].TagAlbum, TagAlbum, strlen(TagAlbum));
   memcpy(Audio[Index].TagCopyright, TagCopyright, strlen(TagCopyright));
+  memcpy(Audio[Index].AssignedList, Category, strlen(Category));
   
   Audio[Index].LayoutOrder = Index;
 
@@ -212,8 +211,6 @@ double PlayAudio(char *Path) {
     LoopStart = Mix_GetMusicLoopStartTime(Music);
     LoopEnd = Mix_GetMusicLoopEndTime(Music);
     LoopLength = Mix_GetMusicLoopLengthTime(Music);
-    
-    SDL_Log("Loaded!");
     
     Mix_PlayMusic(Music, 0);
     Mix_SetMusicPosition(0);
