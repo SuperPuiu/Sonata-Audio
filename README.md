@@ -4,8 +4,13 @@ Puius Audio Player is simply a program which can be used to play all sorts of au
 # Building
 **Linux:**
 You must have installed SDL3 and SDL3_mixer. The header files are included from `include/SDL3/` and `include/SDL3_mixer/` respectively.
+Use `make linux` to build a release version. Use `make` to build a linux test version of the program.
 
-**Windows:** N/A.
+**Windows:**
+You must have installed SDL3 and SDL3_mixer. The header files are included from `include/SDL3/`. You must also have the mingw compiler installed. Use `make windows`
+
+**MacOS:**
+Not supported.
 
 # License
 The project is licensed under GPL-3.0.
