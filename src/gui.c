@@ -101,14 +101,14 @@ int PAP_AudioButton(mu_Context *Context, const char *Name, int AudioID) {
     int LowerAudio = PAP_GetAudioByOrder(Audio[AudioID].LayoutOrder - 1);
 
     if (LowerAudio > -1) {
-      if (mu_mouse_over(Context, (mu_Rect){Slider.x, Slider.y - Slider.h - 5, Slider.w, Slider.h})) {
+      if (mu_mouse_over(Context, (mu_Rect){Slider.x, Slider.y - Slider.h - Context->style->padding, Slider.w, Slider.h})) {
         Audio[AudioID].LayoutOrder -= 1;
         Audio[LowerAudio].LayoutOrder += 1;
       }
     }
 
     if (UpperAudio > -1) {
-      if (mu_mouse_over(Context, (mu_Rect){Slider.x, Slider.y + Slider.h + 5, Slider.w, Slider.h})) {
+      if (mu_mouse_over(Context, (mu_Rect){Slider.x, Slider.y + Slider.h + Context->style->padding, Slider.w, Slider.h})) {
         Audio[AudioID].LayoutOrder += 1;
         Audio[UpperAudio].LayoutOrder -= 1;
       }
@@ -123,21 +123,18 @@ int PAP_AudioButton(mu_Context *Context, const char *Name, int AudioID) {
   return Result;
 }
 
-int PAP_Slider(mu_Context *Context, mu_Real *Value, int Low, int High) {
-  int Result = 0;
-  mu_Rect *l_Rect;
+int PAP_Slider(mu_Context *Context, mu_Real *Value, int Low, int High, char *Format) {
+  int Result = 0, ScrollSpeed = Context->key_down & MU_KEY_SHIFT ? 1 : 2;
 
   mu_push_id(Context, &Value, sizeof(Value));
 
-  /* Get the next rect, save it and push it back */
-  mu_Rect Rect = mu_layout_next(Context);
-  l_Rect = &Rect;
-  mu_layout_set_next(Context, Rect, 0);
+  mu_Rect l_Rect = mu_layout_next(Context);
+  mu_layout_set_next(Context, l_Rect, 0);
 
-  Result = mu_slider_ex(Context, Value, Low, High, 0, "%.2f", MU_OPT_ALIGNCENTER);
+  Result = mu_slider_ex(Context, Value, Low, High, 0, Format, MU_OPT_ALIGNCENTER);
 
-  if (Context->scroll_delta.y != 0 && mu_mouse_over(Context, *l_Rect)) {
-    *Value += Context->scroll_delta.y / (Context->scroll_delta.y / 2) * (Context->scroll_delta.y > 0 ? -1 : 1);
+  if (Context->scroll_delta.y != 0 && mu_mouse_over(Context, l_Rect)) {
+    *Value += Context->scroll_delta.y / (Context->scroll_delta.y / ScrollSpeed) * (Context->scroll_delta.y > 0 ? -1 : 1);
     Result |= MU_RES_CHANGE;
   }
 
@@ -145,10 +142,10 @@ int PAP_Slider(mu_Context *Context, mu_Real *Value, int Low, int High) {
   return Result;
 }
 
-void InitializeGUI() {
+void InitializeGUI() {  
   for (int i = 0; i < PAP_MAX_AUDIO; i++)
     PlaylistWidths[i] = PLAYLIST_WIDTH - 25;
-  
+
   PAP_Title = (mu_Rect){0, 0, WINDOW_WIDTH, 20};
   PAP_Below = (mu_Rect){0, WINDOW_HEIGHT - BELOW_HEIGHT, WINDOW_WIDTH, BELOW_HEIGHT};
   PAP_Playlist = (mu_Rect){WINDOW_WIDTH / 2 - PLAYLIST_WIDTH / 2, WINDOW_HEIGHT / 2 - PLAYLIST_HEIGHT / 2, PLAYLIST_WIDTH, PLAYLIST_HEIGHT};
@@ -177,14 +174,14 @@ void MainWindow(mu_Context *Context) {
   if (mu_begin_window_ex(Context, "BELOW", PAP_Below, BelowOpt)) {
     mu_layout_row(Context, 4, (int[]){100, 100, 300, 100}, 25);
 
-    if (mu_button(Context, "Choose directory")) {
+    if (mu_button(Context, "Load directory")) {
       const char *Path = OpenDialogue(PFD_DIRECTORY);
       size_t PathLen = strlen(Path);
 
       if (Path) {
         #ifndef WINDOWS
         DIR *Directory;
-        struct dirent *Entry; // I guess the name is right
+        struct dirent *Entry;
 
         if ((Directory = opendir(Path)) != NULL) {
           char FullPath[PATH_MAX];
@@ -247,17 +244,12 @@ void MainWindow(mu_Context *Context) {
       }
     }
 
-    if (mu_button(Context, "Choose file")) {
-      const char *Path = OpenDialogue(PFD_FILE);
-
-      if (Path)
-        AddAudio((char *)Path, CurrentCategory);
-      else
-        SDL_Log("Path is NULL.\n");
+    if (mu_button(Context, "Settings")) {
+      
     }
     
     mu_layout_set_next(Context, (mu_Rect){WINDOW_WIDTH / 2 - 150, 0, 300, 25}, 1);
-    if (mu_slider_ex(Context, &l_AudioPosition, 0, AudioDuration, 0, MU_SLIDER_FMT, MU_OPT_ALIGNCENTER)) {
+    if (PAP_Slider(Context, &l_AudioPosition, 0, AudioDuration, "%.2f")) {
       // Mix_PauseMusic();
       AudioPosition = (double)l_AudioPosition;
       Mix_SetMusicPosition(AudioPosition);
@@ -266,7 +258,7 @@ void MainWindow(mu_Context *Context) {
     l_AudioPosition = AudioPosition;
     
     mu_layout_set_next(Context, (mu_Rect){WINDOW_WIDTH - 110, 0, 100, 25}, 1);
-    if (PAP_Slider(Context, &AudioFloat, 0, 128)) {
+    if (PAP_Slider(Context, &AudioFloat, 0, 128, "%.0f")) {
       AudioVolume = (int)AudioFloat;
       Mix_VolumeMusic(AudioVolume);
     }
@@ -276,14 +268,13 @@ void MainWindow(mu_Context *Context) {
   
   /* Playlist */
   if (mu_begin_window_ex(Context, "Playlist", PAP_Playlist, PlaylistOpt)) {
+    int l_Width[] = {PLAYLIST_WIDTH - 20};
+
     mu_Container *Container = mu_get_container(Context, "Menu");
     if (SelectedAudio == -1) {Container->open = 0;}
     
-    AudioData l_Audio[PAP_MAX_AUDIO];
-    uint8_t l_AudioIDs[PAP_MAX_AUDIO];
-
-    memset(l_Audio, 0, sizeof(AudioData) * PAP_MAX_AUDIO);
-    memset(l_AudioIDs, 0, sizeof(uint8_t) * PAP_MAX_AUDIO);
+    AudioData l_Audio[PAP_MAX_AUDIO] = {0};
+    uint8_t l_AudioIDs[PAP_MAX_AUDIO] = {0};
 
     for (int i = 0; i < PAP_MAX_AUDIO; i++) {
       if (Audio[i].Path[0] != 0) {
@@ -296,12 +287,25 @@ void MainWindow(mu_Context *Context) {
       if (l_Audio[i].Path[0] == 0)
         continue;
 
-      mu_layout_row(Context, 0, NULL, 25);
-      mu_layout_width(Context, PLAYLIST_WIDTH - 25);
+      if (strcmp(l_Audio[i].AssignedList, CurrentCategory) != 0)
+        continue;
 
+      mu_layout_row(Context, 1, l_Width, 25);
       PAP_AudioButton(Context, l_Audio[i].Title, l_AudioIDs[i]);
     }
     
+    mu_Rect l_Rect = mu_layout_next(Context);
+    mu_layout_set_next(Context, (mu_Rect){l_Rect.x + l_Width[0] / 2 - 35, l_Rect.y, 70, 20}, 0);
+
+    if (mu_button(Context, "+")) {
+      const char *Path = OpenDialogue(PFD_FILE);
+
+      if (Path)
+        AddAudio((char *)Path, CurrentCategory);
+      else
+        SDL_Log("Path is NULL.\n");
+    }
+
     if (mu_begin_popup(Context, "Menu")) {
       if (mu_button(Context, "Remove")) {
         PopupAction = FuncRemoveAudio;
@@ -333,17 +337,15 @@ void MainWindow(mu_Context *Context) {
     l_Widths[TotalCategoryButtons - 1] = 20;
     
     mu_layout_row(Context, TotalCategoryButtons, l_Widths, TotalCategoryButtons < 8 ? 20 : 15);
-    if (mu_button(Context, "All")) {
-
-    }
+    if (mu_button(Context, "All"))
+      CurrentCategory = "All";
     
     for (uint8_t i = 0; i < PAP_MAX_CATEGORIES; i++) {
       if (Categories[i][0] == 0)
         continue;
        
-      if (mu_button(Context, Categories[i])) {
-        
-      }
+      if (mu_button(Context, Categories[i]))
+        CurrentCategory = Categories[i];
     }
     
     if (mu_button(Context, "+")) {
@@ -420,9 +422,8 @@ void MainWindow(mu_Context *Context) {
 
     mu_layout_set_next(Context, (mu_Rect){(l_Rect.x + l_Rect.w / 2), l_Rect.y + l_Rect.h - 25, 100, 20}, 0);
     
-    if (mu_button_ex(Context, "Abort", 0, MU_OPT_ALIGNCENTER)) {
+    if (mu_button_ex(Context, "Abort", 0, MU_OPT_ALIGNCENTER))
       PopupContainer->open = 0;
-    }
 
     mu_end_window(Context);
   }
@@ -435,22 +436,17 @@ void MainWindow(mu_Context *Context) {
     Context->hover_root = Context->next_hover_root = InfoContainer;
     mu_bring_to_front(Context, InfoContainer);
 
-    char ArtistBuf[128 + 8];
-    char CopyrightBuf[128 + 11];
-    char AlbumBuf[128 + 7];
-
-    memset(ArtistBuf, 0, 136);
-    memset(CopyrightBuf, 0, 139);
-    memset(AlbumBuf, 0, 135);
+    char ArtistBuf[128 + 8] = {0};
+    char CopyrightBuf[128 + 11] = {0};
+    char AlbumBuf[128 + 7] = {0};
 
     memcpy(ArtistBuf, "Artist: ", 8);
-    memcpy(ArtistBuf + 8, Audio[SelectedAudio].TagArtist, strlen(Audio[SelectedAudio].TagArtist));
-    
     memcpy(CopyrightBuf, "Copyright: ", 11);
-    memcpy(CopyrightBuf + 11, Audio[SelectedAudio].TagCopyright, strlen(Audio[SelectedAudio].TagCopyright));
     memcpy(AlbumBuf, "Album: ", 7);
+    memcpy(ArtistBuf + 8, Audio[SelectedAudio].TagArtist, strlen(Audio[SelectedAudio].TagArtist));
+    memcpy(CopyrightBuf + 11, Audio[SelectedAudio].TagCopyright, strlen(Audio[SelectedAudio].TagCopyright));
     memcpy(AlbumBuf + 7, Audio[SelectedAudio].TagAlbum, strlen(Audio[SelectedAudio].TagAlbum));
-    
+
     /* Columns hate me */
     mu_layout_row(Context, 1, (int[]){INFO_WIDTH - 25}, 25);
     mu_label(Context, ArtistBuf);
