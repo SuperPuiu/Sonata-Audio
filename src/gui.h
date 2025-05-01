@@ -1,9 +1,8 @@
 #ifndef __PAPGUI__
 #define __PAPGUI__
 
-#define BELOW_HEIGHT      35
-#define EXTRA_HEIGHT      35
-#define PLAYLIST_WIDTH    500
+#define BELOW_HEIGHT      80
+#define PLAYLIST_WIDTH    550
 #define PLAYLIST_HEIGHT   300
 #define INFO_WIDTH        300
 #define INFO_HEIGHT       200

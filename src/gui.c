@@ -21,7 +21,6 @@ static int PlaylistWidths[PAP_MAX_AUDIO];
 static int TitleOpt     = MU_OPT_NORESIZE | MU_OPT_NOSCROLL | MU_OPT_NOFRAME | MU_OPT_ANCHORED;
 static int BelowOpt     = MU_OPT_NORESIZE | MU_OPT_NOSCROLL | MU_OPT_NOCLOSE | MU_OPT_NOTITLE | MU_OPT_NOFRAME;
 static int PlaylistOpt  = MU_OPT_NOTITLE | MU_OPT_NOBORDER | MU_OPT_NOINTERACT;
-static int ExtraOpt     = MU_OPT_NOTITLE | MU_OPT_NOFRAME | MU_OPT_NOSCROLL;
 static int CategoryOpt  = MU_OPT_NOTITLE | MU_OPT_NOBORDER | MU_OPT_NOINTERACT;
 
 static int PopupOpt = 0;
@@ -33,9 +32,10 @@ float l_AudioPosition;
 static float AudioFloat = MIX_MAX_VOLUME;
 
 static bool InfoOpen = false, PopupOpen = false;
+static bool PausedMusic = false; /* Paused using the button */
 
 static mu_Rect PAP_Title, PAP_Below;
-static mu_Rect PAP_Extra, PAP_Playlist;
+static mu_Rect PAP_Playlist, PAP_Popup;
 static mu_Rect PAP_InfoFrame, PAP_Category;
 static mu_Rect PAP_Popup;
 
@@ -123,20 +123,29 @@ int PAP_AudioButton(mu_Context *Context, const char *Name, int AudioID) {
   return Result;
 }
 
-int PAP_Slider(mu_Context *Context, mu_Real *Value, int Low, int High, char *Format) {
+int PAP_Slider(mu_Context *Context, mu_Real *Value, int Low, int High) {
   int Result = 0, ScrollSpeed = Context->key_down & MU_KEY_SHIFT ? 1 : 2;
+  mu_Real Last = *Value, l_Value = Last;
+  mu_Rect l_Rect = mu_layout_next(Context);
 
   mu_push_id(Context, &Value, sizeof(Value));
+  mu_Id ID = mu_get_id(Context, &Value, sizeof(Value)); 
+  
+  mu_update_control(Context, ID, l_Rect, MU_OPT_ALIGNCENTER);
+  
+  if (Context->focus == ID && (Context->mouse_down | Context->mouse_pressed) == MU_MOUSE_LEFT)
+    l_Value = Low + (Context->mouse_pos.x - l_Rect.x) * (High - Low) / l_Rect.w;
 
-  mu_Rect l_Rect = mu_layout_next(Context);
-  mu_layout_set_next(Context, l_Rect, 0);
-
-  Result = mu_slider_ex(Context, Value, Low, High, 0, Format, MU_OPT_ALIGNCENTER);
-
-  if (Context->scroll_delta.y != 0 && mu_mouse_over(Context, l_Rect)) {
+  if (Context->scroll_delta.y != 0 && mu_mouse_over(Context, l_Rect))
     *Value += Context->scroll_delta.y / (Context->scroll_delta.y / ScrollSpeed) * (Context->scroll_delta.y > 0 ? -1 : 1);
+  
+  if (Last != l_Value) {
+    *Value = l_Value = mu_clamp(l_Value, Low, High);
     Result |= MU_RES_CHANGE;
   }
+  
+  mu_draw_control_frame(Context, ID, l_Rect, MU_COLOR_BASE, MU_OPT_NOINTERACT);
+  mu_draw_control_frame(Context, ID, (mu_Rect){l_Rect.x, l_Rect.y, mu_clamp(l_Value / High * l_Rect.w, 0, l_Rect.w), l_Rect.h}, MU_COLOR_TEXT, MU_OPT_NOINTERACT);
 
   mu_pop_id(Context);
   return Result;
@@ -149,7 +158,6 @@ void InitializeGUI() {
   PAP_Title = (mu_Rect){0, 0, WINDOW_WIDTH, 20};
   PAP_Below = (mu_Rect){0, WINDOW_HEIGHT - BELOW_HEIGHT, WINDOW_WIDTH, BELOW_HEIGHT};
   PAP_Playlist = (mu_Rect){WINDOW_WIDTH / 2 - PLAYLIST_WIDTH / 2, WINDOW_HEIGHT / 2 - PLAYLIST_HEIGHT / 2, PLAYLIST_WIDTH, PLAYLIST_HEIGHT};
-  PAP_Extra = (mu_Rect){0, WINDOW_HEIGHT - BELOW_HEIGHT - EXTRA_HEIGHT, WINDOW_WIDTH, EXTRA_HEIGHT};
   PAP_InfoFrame = (mu_Rect){WINDOW_WIDTH / 2 - INFO_WIDTH / 2, WINDOW_HEIGHT / 2 - INFO_HEIGHT / 2, INFO_WIDTH, INFO_HEIGHT};
   PAP_Category = (mu_Rect){PAP_Playlist.x, PAP_Playlist.y - CATEGORY_HEIGHT - 3, CATEGORY_WIDTH, CATEGORY_HEIGHT};
   PAP_Popup = (mu_Rect){WINDOW_WIDTH / 2 - POPUP_WIDTH / 2, WINDOW_HEIGHT / 2 - POPUP_HEIGHT / 2, POPUP_WIDTH, POPUP_HEIGHT};
@@ -172,8 +180,11 @@ void MainWindow(mu_Context *Context) {
 
   /* Below */
   if (mu_begin_window_ex(Context, "BELOW", PAP_Below, BelowOpt)) {
-    mu_layout_row(Context, 4, (int[]){100, 100, 300, 100}, 25);
+    mu_Rect InteractionRect = {WINDOW_WIDTH / 2 - 105, 50, 100, 20};
+    mu_Rect LoopRect = {InteractionRect.x + 105, InteractionRect.y, InteractionRect.w, InteractionRect.h};
+    mu_Rect VolumeRect = {WINDOW_WIDTH - 110, 50, 100, 20};
 
+    mu_layout_set_next(Context, (mu_Rect){2, 50, 100, 20}, 1);
     if (mu_button(Context, "Load directory")) {
       const char *Path = OpenDialogue(PFD_DIRECTORY);
       size_t PathLen = strlen(Path);
@@ -244,21 +255,57 @@ void MainWindow(mu_Context *Context) {
       }
     }
 
-    if (mu_button(Context, "Settings")) {
+    /*if (mu_button(Context, "Settings")) {
       
-    }
+    }*/
+
+    mu_layout_set_next(Context, InteractionRect, 1);
     
-    mu_layout_set_next(Context, (mu_Rect){WINDOW_WIDTH / 2 - 150, 0, 300, 25}, 1);
-    if (PAP_Slider(Context, &l_AudioPosition, 0, AudioDuration, "%.2f")) {
-      // Mix_PauseMusic();
+    if (mu_button_ex(Context, InteractButtonText, 0, MU_OPT_ALIGNCENTER)) {
+      if (Mix_PausedMusic()) {
+        Mix_ResumeMusic();
+        InteractButtonText = "Pause";
+        PausedMusic = false;
+      } else {
+        Mix_PauseMusic();
+        InteractButtonText = "Resume";
+        PausedMusic = true;
+      }
+    }
+
+    mu_layout_set_next(Context, LoopRect, 1);
+    
+    if (mu_button_ex(Context, LoopButtonText, 0, MU_OPT_ALIGNCENTER)) {
+      if (LoopStatus == LOOP_NONE) {
+        LoopButtonText = "Looping song";
+        LoopStatus = LOOP_SONG;
+      } else if (LoopStatus == LOOP_SONG) {
+        LoopButtonText = "Looping all";
+        LoopStatus = LOOP_ALL;
+      } else if (LoopStatus == LOOP_ALL) {
+        LoopButtonText = "No loop";
+        LoopStatus = LOOP_NONE;
+      }
+    }
+
+    mu_layout_set_next(Context, (mu_Rect){VolumeRect.x - VolumeRect.w - Context->style->padding + 50, VolumeRect.y, VolumeRect.w - 50, VolumeRect.h}, 1);
+    mu_label(Context, "Volume:");
+
+    mu_layout_set_next(Context, (mu_Rect){WINDOW_WIDTH / 2 - 225, 30, 450, 15}, 1);
+    if (PAP_Slider(Context, &l_AudioPosition, 0, AudioDuration)) {
+      if (!Mix_PausedMusic())
+        Mix_PauseMusic();
+
       AudioPosition = (double)l_AudioPosition;
       Mix_SetMusicPosition(AudioPosition);
+    } else if (Context->mouse_down != MU_MOUSE_LEFT && !PausedMusic) {
+      Mix_ResumeMusic();
     }
 
     l_AudioPosition = AudioPosition;
     
-    mu_layout_set_next(Context, (mu_Rect){WINDOW_WIDTH - 110, 0, 100, 25}, 1);
-    if (PAP_Slider(Context, &AudioFloat, 0, 128, "%.0f")) {
+    mu_layout_set_next(Context, VolumeRect, 1);
+    if (PAP_Slider(Context, &AudioFloat, 0, 128)) {
       AudioVolume = (int)AudioFloat;
       Mix_VolumeMusic(AudioVolume);
     }
@@ -267,7 +314,7 @@ void MainWindow(mu_Context *Context) {
   }
   
   /* Playlist */
-  if (mu_begin_window_ex(Context, "Playlist", PAP_Playlist, PlaylistOpt)) {
+  if (mu_begin_window_ex(Context, "PLAYLIST", PAP_Playlist, PlaylistOpt)) {
     int l_Width[] = {PLAYLIST_WIDTH - 20};
 
     mu_Container *Container = mu_get_container(Context, "Menu");
@@ -360,41 +407,6 @@ void MainWindow(mu_Context *Context) {
           break;
         }
       } 
-    }
-
-    mu_end_window(Context);
-  }
-
-  /* Extra */
-  if (mu_begin_window_ex(Context, "EXTRA", PAP_Extra, ExtraOpt)) {
-    mu_Rect InteractionRect = (mu_Rect){WINDOW_WIDTH / 2 - 105, 10, 100, 20};
-    mu_Rect LoopRect = (mu_Rect){InteractionRect.x + 105, InteractionRect.y, InteractionRect.w, InteractionRect.h};
-
-    mu_layout_set_next(Context, InteractionRect, 1);
-    
-    if (mu_button_ex(Context, InteractButtonText, 0, MU_OPT_ALIGNCENTER)) {
-      if (Mix_PausedMusic()) {
-        Mix_ResumeMusic();
-        InteractButtonText = "Pause";
-      } else {
-        Mix_PauseMusic();
-        InteractButtonText = "Resume";
-      }
-    }
-
-    mu_layout_set_next(Context, LoopRect, 1);
-    
-    if (mu_button_ex(Context, LoopButtonText, 0, MU_OPT_ALIGNCENTER)) {
-      if (LoopStatus == LOOP_NONE) {
-        LoopButtonText = "Looping song";
-        LoopStatus = LOOP_SONG;
-      } else if (LoopStatus == LOOP_SONG) {
-        LoopButtonText = "Looping all";
-        LoopStatus = LOOP_ALL;
-      } else if (LoopStatus == LOOP_ALL) {
-        LoopButtonText = "No loop";
-        LoopStatus = LOOP_NONE;
-      }
     }
 
     mu_end_window(Context);
