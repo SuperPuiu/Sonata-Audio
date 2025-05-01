@@ -2,7 +2,6 @@
 #include <string.h>
 
 #ifndef WINDOWS
-#include <linux/limits.h>
 #include <SDL3_mixer/SDL_mixer.h>
 
 const char *PathDelimiter = "/";
@@ -23,7 +22,7 @@ static SDL_AudioSpec Specifications = {
 
 AudioData Audio[PAP_MAX_AUDIO];
 
-bool LoopLock = false; /* Used by LOOP_ALL functionality */
+bool LoopLock = false; /* Used for LOOP_ALL functionality */
 
 int AudioVolume = MIX_MAX_VOLUME, AudioCurrentIndex = -1;
 
@@ -71,10 +70,13 @@ int GetEmptyIndex() {
 
 int GetNextIndex(int Index) {
   for (int i = (Index > PAP_MAX_AUDIO || Index + 1 > PAP_MAX_AUDIO) ? 0 : Index + 1; i < PAP_MAX_AUDIO; i++) {
+    if (Audio[Index].Path[0] == 0)
+      continue;
+
     if (strcmp(Audio[Index].AssignedList, Audio[i].AssignedList) == 0)
       return i;
   }
-
+  
   return 0; /* Fallback return */
 }
 
@@ -94,8 +96,10 @@ int GetAudioIndex(char *Path) {
 }
 
 int AddAudio(char *Path, char *Category) {
-  if (GetAudioIndex(Path) != -1)
+  if (GetAudioIndex(Path) != -1) {
+    SDL_Log("\"%s\" is not a loaded audio file.", Path);
     return -1;
+  }
   
   Category = Category == NULL ? "All" : Category;
 
@@ -163,9 +167,7 @@ void UpdateAudioPosition() {
   if (Mix_PlayingMusic()) {
     LoopLock = false;
     AudioPosition = Mix_GetMusicPosition(Music);
-  }
-
-  if (!Mix_PlayingMusic()) {
+  } else {
     if (LoopStatus == LOOP_SONG) {
       if (GetAudioIndex(AudioCurrentPath) != -1)
         PlayAudio(AudioCurrentPath);
