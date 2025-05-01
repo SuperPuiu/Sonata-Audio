@@ -642,7 +642,7 @@ void mu_draw_control_frame(mu_Context *ctx, mu_Id id, mu_Rect rect,
   int colorid, int opt)
 {
   if (opt & MU_OPT_NOFRAME) { return; }
-  colorid += (ctx->focus == id) ? 2 : (ctx->hover == id) ? 1 : 0;
+  colorid += (opt & MU_OPT_NOINTERACT) ? 0 : (ctx->focus == id) ? 2 : (ctx->hover == id) ? 1 : 0;
   ctx->draw_frame(ctx, rect, colorid, opt & MU_OPT_NOBORDER ? 0 : 1);
 }
 
@@ -881,7 +881,7 @@ int mu_slider_ex(mu_Context *ctx, mu_Real *value, mu_Real low, mu_Real high,
   x = (v - low) * (base.w - w) / (high - low);
   thumb = mu_rect(base.x + x, base.y, w, base.h);
   mu_draw_control_frame(ctx, id, thumb, MU_COLOR_BUTTON, opt);
-  /* draw text  */
+  /* draw text */
   sprintf(buf, fmt, v);
   mu_draw_control_text(ctx, buf, base, MU_COLOR_TEXT, opt);
 
