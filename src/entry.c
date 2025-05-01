@@ -98,8 +98,7 @@ int main(int argc, char **argv) {
 
     r_present();
     
-    uint64_t End = SDL_GetPerformanceCounter();
-    float Elapsed = (End - Start) / (float)SDL_GetPerformanceFrequency();
+    float Elapsed = (SDL_GetPerformanceCounter() - Start) / (float)SDL_GetPerformanceFrequency();
 
     if (Elapsed > 0 && ((1000 / FPS) - Elapsed) > 0)
       SDL_Delay((1000 / FPS) - Elapsed);
