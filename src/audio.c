@@ -20,10 +20,11 @@ static SDL_AudioSpec Specifications = {
   .channels = MIX_DEFAULT_CHANNELS
 };
 
-AudioData Audio[PAP_MAX_AUDIO];
+AudioData *Audio;
 
 bool LoopLock = false; /* Used for LOOP_ALL functionality */
 
+uint16_t PAP_TotalAudio = 2;
 int AudioVolume = MIX_MAX_VOLUME, AudioCurrentIndex = -1;
 
 static Mix_Music *Music;
@@ -41,8 +42,7 @@ void InitializeAudio() {
     Mix_QuerySpec(&Specifications.freq, &Specifications.format, &Specifications.channels);
   }
   
-  for (int i = 0; i < PAP_MAX_AUDIO; i++)
-    memset(Audio[i].Path, 0, PATH_MAX);
+  Audio = malloc(sizeof(AudioData) * PAP_TotalAudio);
   
   Mix_VolumeMusic(AudioVolume);
 }
@@ -50,10 +50,10 @@ void InitializeAudio() {
 void AudioRemove(int Index) {
   memset(&Audio[Index], 0, sizeof(AudioData));
 
-  if (Index == PAP_MAX_AUDIO || Audio[Index].Path[0] == 0)
+  if (Index == PAP_TotalAudio || Audio[Index].Path[0] == 0)
     return;
 
-  for (int i = Index + 1; i < PAP_MAX_AUDIO; i++) {
+  for (int i = Index + 1; i < PAP_TotalAudio; i++) {
     if (Audio[Index].Path[0] == 0)
       continue;
 
@@ -62,14 +62,14 @@ void AudioRemove(int Index) {
 }
 
 int GetEmptyIndex() {
-  for (int i = 0; i < PAP_MAX_AUDIO; i++)
+  for (int i = 0; i < PAP_TotalAudio; i++)
     if (Audio[i].Path[0] == 0)
       return i;
   return -1;
 }
 
 int GetNextIndex(int Index) {
-  for (int i = (Index > PAP_MAX_AUDIO || Index + 1 > PAP_MAX_AUDIO) ? 0 : Index + 1; i < PAP_MAX_AUDIO; i++) {
+  for (int i = (Index > PAP_TotalAudio || Index + 1 > PAP_TotalAudio) ? 0 : Index + 1; i < PAP_TotalAudio; i++) {
     if (Audio[Index].Path[0] == 0)
       continue;
 
@@ -84,7 +84,7 @@ int GetAudioIndex(char *Path) {
   if (Path == NULL)
     return -1;
 
-  for (int i = 0; i < PAP_MAX_AUDIO; i++) {
+  for (int i = 0; i < PAP_TotalAudio; i++) {
     if (Audio[i].Path[0] == 0)
       continue;
 
@@ -97,7 +97,7 @@ int GetAudioIndex(char *Path) {
 
 int AddAudio(char *Path, char *Category) {
   if (GetAudioIndex(Path) != -1) {
-    SDL_Log("\"%s\" is not a loaded audio file.", Path);
+    SDL_Log("\"%s\" is already loaded.", Path);
     return -1;
   }
   
@@ -111,8 +111,21 @@ int AddAudio(char *Path, char *Category) {
   const char *TagAlbum = NULL;
   const char *TagCopyright = NULL;
 
-  if (Index == -1)
-    return -1;
+  if (Index == -1) {
+    AudioData *l_Audio = malloc(sizeof(AudioData) * (PAP_TotalAudio * 2));
+    
+    Index = PAP_TotalAudio;
+
+    for (uint16_t i = 0; i < PAP_TotalAudio; i++)
+      memcpy(&l_Audio[i], &Audio[i], sizeof(AudioData));
+
+    for (uint16_t i = PAP_TotalAudio; i < PAP_TotalAudio * 2; i++)
+      memset(&l_Audio[i], 0, sizeof(AudioData));
+
+    PAP_TotalAudio *= 2;
+    free(Audio);
+    Audio = l_Audio;
+  }
 
   l_Music = Mix_LoadMUS(Path);
 

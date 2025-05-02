@@ -24,10 +24,10 @@ typedef struct {
   uint8_t LayoutOrder;
 } AudioData;
 
-extern AudioData Audio[];
+extern AudioData *Audio;
 extern double AudioDuration, AudioPosition;
-extern int AudioVolume;
-extern int AudioCurrentIndex;
+extern int AudioVolume, AudioCurrentIndex;
+extern uint16_t PAP_TotalAudio; 
 
 void AudioRemove(int Index);
 void UpdateAudioPosition();
