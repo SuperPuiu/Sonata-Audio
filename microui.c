@@ -425,6 +425,10 @@ void mu_input_text(mu_Context *ctx, const char *text) {
 mu_Command* mu_push_command(mu_Context *ctx, int type, int size) {
   mu_Command *cmd = (mu_Command*) (ctx->command_list.items + ctx->command_list.idx);
   expect(ctx->command_list.idx + size < MU_COMMANDLIST_SIZE);
+  
+  // Need to pad to the next multiple of 8 to respect alignment requirements.
+  // https://github.com/rxi/microui/pull/67/commits/654a0b0396a57b50206bd5868e8a18341819765f
+  size = (size+7) & -8;
   cmd->base.type = type;
   cmd->base.size = size;
   ctx->command_list.idx += size;
