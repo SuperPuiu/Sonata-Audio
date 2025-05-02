@@ -18,7 +18,7 @@
 #define MU_LAYOUTSTACK_SIZE     16
 #define MU_CONTAINERPOOL_SIZE   48
 #define MU_TREENODEPOOL_SIZE    48
-#define MU_MAX_WIDTHS           16
+#define MU_MAX_WIDTHS           64
 #define MU_REAL                 float
 #define MU_REAL_FMT             "%.3g"
 #define MU_SLIDER_FMT           "%.2f"
