@@ -17,7 +17,6 @@
 #include <string.h>
 
 int LoopStatus = LOOP_NONE;
-static int PlaylistWidths[PAP_MAX_AUDIO];
 static int TitleOpt     = MU_OPT_NORESIZE | MU_OPT_NOSCROLL | MU_OPT_NOFRAME | MU_OPT_ANCHORED;
 static int BelowOpt     = MU_OPT_NORESIZE | MU_OPT_NOSCROLL | MU_OPT_NOCLOSE | MU_OPT_NOTITLE | MU_OPT_NOFRAME;
 static int PlaylistOpt  = MU_OPT_NOTITLE | MU_OPT_NOBORDER | MU_OPT_NOINTERACT;
@@ -40,7 +39,7 @@ static mu_Rect PAP_InfoFrame, PAP_Category;
 static mu_Rect PAP_Popup;
 
 char *CurrentCategory = "All";
-char Categories[PAP_MAX_CATEGORIES][128];
+char Categories[PAP_MAX_CATEGORIES][32];
 static const char *InteractButtonText = "Pause";
 static const char *LoopButtonText = "No loop";
 
@@ -60,7 +59,7 @@ int TextHeight(mu_Font font) {
 }
 
 int PAP_GetAudioByOrder(uint8_t RequestedOrder) {
-  for (int i = 0; i < PAP_MAX_AUDIO; i++) {
+  for (int i = 0; i < PAP_TotalAudio; i++) {
     if (Audio[i].LayoutOrder == RequestedOrder)
       return i;
   }
@@ -151,10 +150,7 @@ int PAP_Slider(mu_Context *Context, mu_Real *Value, int Low, int High) {
   return Result;
 }
 
-void InitializeGUI() {  
-  for (int i = 0; i < PAP_MAX_AUDIO; i++)
-    PlaylistWidths[i] = PLAYLIST_WIDTH - 25;
-
+void InitializeGUI() {
   PAP_Title = (mu_Rect){0, 0, WINDOW_WIDTH, 20};
   PAP_Below = (mu_Rect){0, WINDOW_HEIGHT - BELOW_HEIGHT, WINDOW_WIDTH, BELOW_HEIGHT};
   PAP_Playlist = (mu_Rect){WINDOW_WIDTH / 2 - PLAYLIST_WIDTH / 2, WINDOW_HEIGHT / 2 - PLAYLIST_HEIGHT / 2, PLAYLIST_WIDTH, PLAYLIST_HEIGHT};
@@ -320,17 +316,17 @@ void MainWindow(mu_Context *Context) {
     mu_Container *Container = mu_get_container(Context, "Menu");
     if (SelectedAudio == -1) {Container->open = 0;}
     
-    AudioData l_Audio[PAP_MAX_AUDIO] = {0};
-    uint8_t l_AudioIDs[PAP_MAX_AUDIO] = {0};
+    AudioData l_Audio[PAP_TotalAudio];
+    uint8_t l_AudioIDs[PAP_TotalAudio];
 
-    for (int i = 0; i < PAP_MAX_AUDIO; i++) {
+    for (int i = 0; i < PAP_TotalAudio; i++) {
       if (Audio[i].Path[0] != 0) {
         l_Audio[Audio[i].LayoutOrder] = Audio[i];
         l_AudioIDs[Audio[i].LayoutOrder] = i;
       }
     }
 
-    for (int i = 0; i < PAP_MAX_AUDIO; i++) {
+    for (int i = 0; i < PAP_TotalAudio; i++) {
       if (l_Audio[i].Path[0] == 0)
         continue;
 
@@ -383,7 +379,7 @@ void MainWindow(mu_Context *Context) {
     
     l_Widths[TotalCategoryButtons - 1] = 20;
     
-    mu_layout_row(Context, TotalCategoryButtons, l_Widths, TotalCategoryButtons < 8 ? 20 : 15);
+    mu_layout_row(Context, TotalCategoryButtons, l_Widths, TotalCategoryButtons < 9 ? 20 : 15);
     if (mu_button(Context, "All"))
       CurrentCategory = "All";
     
@@ -395,20 +391,22 @@ void MainWindow(mu_Context *Context) {
         CurrentCategory = Categories[i];
     }
     
-    if (mu_button(Context, "+")) {
-      for (uint8_t i = 0; i < PAP_MAX_CATEGORIES; i++) {
-        if (Categories[i][0] == 0) {
-          char Buf[5];
+    if (TotalCategoryButtons - 1 < PAP_MAX_CATEGORIES) {
+      if (mu_button(Context, "+")) {
+        for (uint8_t i = 0; i < PAP_MAX_CATEGORIES; i++) {
+          if (Categories[i][0] == 0) {
+            char Buf[5];
           
-          TotalCategoryButtons += 1;
-          sprintf(Buf, "%u", i); /* me when itoa doesn't want to compile */
-          memcpy(Categories[i], "Category ", 9);
-          memcpy(Categories[i] + 9, Buf, strlen(Buf));
-          break;
-        }
-      } 
+            TotalCategoryButtons += 1;
+            sprintf(Buf, "%u", i); /* me when itoa doesn't want to compile */
+            memcpy(Categories[i], "Category ", 9);
+            memcpy(Categories[i] + 9, Buf, strlen(Buf));
+            break;
+          }
+        } 
+      }
     }
-
+    
     mu_end_window(Context);
   }
   
