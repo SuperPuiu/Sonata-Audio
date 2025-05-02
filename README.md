@@ -7,7 +7,7 @@ You must have installed SDL3 and SDL3_mixer. The header files are included from 
 Use `make linux` to build a release version. Use `make` to build a linux test version of the program.
 
 **Windows:**
-You must have installed SDL3 and SDL3_mixer. The header files are included from `include/SDL3/`. You must also have the mingw compiler installed. Use `make windows`
+You must have installed SDL3 and SDL3_mixer. The header files are included from `include/SDL3/`. You must also have the mingw compiler installed. Use `make windows` to build the windows version of the program.
 
 **MacOS:**
 Not supported.
