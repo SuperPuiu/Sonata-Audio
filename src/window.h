@@ -42,8 +42,6 @@ void OpenWindow(void) {
 
   if (!MainWindow)
     SDL_Log("OpenWindow: %s", SDL_GetError());
-  
-  SDL_SetWindowBordered(MainWindow, 0);
 
   /* Now populate our variables using the newly created window */
   l_Display = (Display *)SDL_GetPointerProperty(SDL_GetWindowProperties(MainWindow), SDL_PROP_WINDOW_X11_DISPLAY_POINTER, NULL);
@@ -112,8 +110,6 @@ LRESULT CALLBACK CustomRedrawWindow(HWND l_HWND, UINT Message, WPARAM l_WPARAM, 
 void OpenWindow(void) {
   SDL_Window *Window = SDL_CreateWindow("Puius Audio Player", WINDOW_WIDTH, WINDOW_HEIGHT, 0);
   ID = (HWND)SDL_GetPointerProperty(SDL_GetWindowProperties(Window), SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
-  
-  SDL_SetWindowBordered(Window, 0);
 
   SDL_WNDPROC = (WNDPROC)SetWindowLongPtr(GetActiveWindow(), GWLP_WNDPROC, (LONG_PTR)&CustomRedrawWindow);
 
