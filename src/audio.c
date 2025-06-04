@@ -24,7 +24,7 @@ AudioData *Audio;
 
 bool LoopLock = false; /* Used for LOOP_ALL functionality */
 
-uint16_t PAP_TotalAudio = 2;
+uint32_t PAP_TotalAudio = 2;
 int AudioVolume = MIX_MAX_VOLUME, AudioCurrentIndex = -1;
 
 static Mix_Music *Music;
@@ -47,13 +47,13 @@ void InitializeAudio() {
   Mix_VolumeMusic(AudioVolume);
 }
 
-void AudioRemove(int Index) {
-  memset(&Audio[Index], 0, sizeof(AudioData));
-
+void AudioRemove(uint32_t Index) {
   if (Index == PAP_TotalAudio || Audio[Index].Path[0] == 0)
     return;
+  
+  memset(&Audio[Index], 0, sizeof(AudioData));
 
-  for (int i = Index + 1; i < PAP_TotalAudio; i++) {
+  for (uint32_t i = Index + 1; i < PAP_TotalAudio; i++) {
     if (Audio[Index].Path[0] == 0)
       continue;
 
@@ -62,15 +62,20 @@ void AudioRemove(int Index) {
 }
 
 int GetEmptyIndex() {
-  for (int i = 0; i < PAP_TotalAudio; i++)
+  for (uint32_t i = 0; i < PAP_TotalAudio; i++)
     if (Audio[i].Path[0] == 0)
       return i;
   return -1;
 }
 
-int GetNextIndex(int Index) {
-  for (int i = (Index > PAP_TotalAudio || Index + 1 > PAP_TotalAudio) ? 0 : Index + 1; i < PAP_TotalAudio; i++) {
+int GetNextIndex(uint32_t Index) {
+  uint32_t LayoutOrder = Audio[Index].LayoutOrder;
+
+  for (uint32_t i = 0; i < PAP_TotalAudio; i++) {
     if (Audio[Index].Path[0] == 0)
+      continue;
+
+    if (Audio[i].LayoutOrder <= LayoutOrder)
       continue;
 
     if (strcmp(Audio[Index].AssignedList, Audio[i].AssignedList) == 0)
@@ -84,7 +89,7 @@ int GetAudioIndex(char *Path) {
   if (Path == NULL)
     return -1;
 
-  for (int i = 0; i < PAP_TotalAudio; i++) {
+  for (uint32_t i = 0; i < PAP_TotalAudio; i++) {
     if (Audio[i].Path[0] == 0)
       continue;
 

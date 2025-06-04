@@ -21,15 +21,15 @@ typedef struct {
 
   char AssignedList[128];
 
-  uint8_t LayoutOrder;
+  uint32_t LayoutOrder;
 } AudioData;
 
 extern AudioData *Audio;
 extern double AudioDuration, AudioPosition;
 extern int AudioVolume, AudioCurrentIndex;
-extern uint16_t PAP_TotalAudio; 
+extern uint32_t PAP_TotalAudio; 
 
-void AudioRemove(int Index);
+void AudioRemove(uint32_t Index);
 void UpdateAudioPosition();
 void InitializeAudio();
 int AddAudio(char *Path, char *Category);
