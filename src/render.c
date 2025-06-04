@@ -15,7 +15,7 @@ static uint32_t Background;
 static mu_Rect Clip = {0, 0, WINDOW_WIDTH, WINDOW_HEIGHT};
 static mu_Rect TextureBuffer[BUFFER_SIZE];
 static mu_Rect SourceBuffer[BUFFER_SIZE];
-static mu_Color ColorBuffer[BUFFER_SIZE]; 
+static mu_Color ColorBuffer[BUFFER_SIZE];
 
 static unsigned int BufferIndex = 0;
 
@@ -49,13 +49,13 @@ static inline mu_Color BlendPixel(mu_Color Destination, mu_Color Source) {
   return Destination;
 }
 
-void r_init() {
+void r_init(void) {
   OpenWindow();
   Background = ColorToNumber(mu_color(33, 33, 33, 255));
 }
 
-void FlushBuffers() {
-  for (unsigned int i = 0; i < BufferIndex; i++) {
+void FlushBuffers(void) {
+  for (uint32_t i = 0; i < BufferIndex; i++) {
     mu_Rect *Source = &SourceBuffer[i];
     mu_Rect *Texture = &TextureBuffer[i];
 
@@ -63,11 +63,13 @@ void FlushBuffers() {
     uint16_t X = mu_max(Source->x, Clip.x);
     uint16_t Width = mu_min(Source->x + Source->w, Clip.x + Clip.w);
     uint16_t Height = mu_min(Source->y + Source->h, Clip.y + Clip.h);
+    
+    uint32_t WindowArea = WINDOW_WIDTH * WINDOW_HEIGHT;
 
     for (uint16_t CurrentY = Y; CurrentY < Height; CurrentY++) {
       for (uint16_t CurrentX = X; CurrentX < Width; CurrentX++) {
         uint32_t PixelLocation = CurrentY * WINDOW_WIDTH + CurrentX;
-        if (PixelLocation > WINDOW_WIDTH * WINDOW_HEIGHT)
+        if (PixelLocation > WindowArea)
           continue;
 
         /* Textures */
@@ -106,10 +108,10 @@ void PushRectangle(mu_Rect Source, mu_Rect Texture, mu_Color Color) {
 void r_set_clip_rect(mu_Rect Rect) {
   FlushBuffers();
 
-  unsigned int Y = mu_max(0, Rect.y);
-  unsigned int X = mu_max(0, Rect.x);
-  unsigned int Height = mu_min(WINDOW_HEIGHT, Rect.y + Rect.h) - Y;
-  unsigned int Width = mu_min(WINDOW_WIDTH, Rect.x + Rect.w) - X;
+  uint32_t Y = mu_max(0, Rect.y);
+  uint32_t X = mu_max(0, Rect.x);
+  uint32_t Height = mu_min(WINDOW_HEIGHT, Rect.y + Rect.h) - Y;
+  uint32_t Width = mu_min(WINDOW_WIDTH, Rect.x + Rect.w) - X;
 
   Clip = (mu_Rect){X, Y, Width, Height};
 }
@@ -125,7 +127,7 @@ void r_draw_text(const char *Text, mu_Vec2 Position, mu_Color Color) {
     if ((*Pointer & 0xc0) == 0x80) 
       continue;
 
-    int Character = mu_min((unsigned char) *Pointer, 127);
+    int32_t Character = mu_min((unsigned char) *Pointer, 127);
     mu_Rect Source = atlas[ATLAS_FONT + Character];
     Destination.w = Source.w;
     Destination.h = Source.h;
@@ -140,14 +142,14 @@ void r_draw_text(const char *Text, mu_Vec2 Position, mu_Color Color) {
 void r_draw_icon(int IconID, mu_Rect Rect, mu_Color Color) {
   mu_Rect Source = atlas[IconID];
 
-  unsigned int X = Rect.x + (Rect.w - Source.w) / 2;
-  unsigned int Y = Rect.y + (Rect.h - Source.h) / 2;
+  uint32_t X = Rect.x + (Rect.w - Source.w) / 2;
+  uint32_t Y = Rect.y + (Rect.h - Source.h) / 2;
 
   PushRectangle((mu_Rect){X, Y, Source.w, Source.h}, Source, Color);
 }
 
 int r_get_text_width(const char *Text, int Length) {
-  int Width = 0;
+  int32_t Width = 0;
   
   for (const char *Pointer = Text; *Pointer && Length--; Pointer++) {
     if ((*Pointer & 0xc0) == 0x80)
@@ -164,7 +166,7 @@ int r_get_text_height(void) {
   return 18;
 }
 
-void r_clear() {
+void r_clear(void) {
   FlushBuffers();
   ClearWindow(Background);
 }
