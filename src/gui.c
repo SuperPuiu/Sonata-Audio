@@ -59,7 +59,7 @@ int TextHeight(mu_Font font) {
 }
 
 int PAP_GetAudioByOrder(uint8_t RequestedOrder) {
-  for (int i = 0; i < PAP_TotalAudio; i++) {
+  for (uint32_t i = 0; i < PAP_TotalAudio; i++) {
     if (Audio[i].LayoutOrder == RequestedOrder)
       return i;
   }
@@ -261,12 +261,12 @@ void MainWindow(mu_Context *Context) {
       if (Mix_PausedMusic()) {
         Mix_ResumeMusic();
         InteractButtonText = "Pause";
-        PausedMusic = false;
       } else {
         Mix_PauseMusic();
         InteractButtonText = "Resume";
-        PausedMusic = true;
       }
+
+      PausedMusic = !PausedMusic;
     }
 
     mu_layout_set_next(Context, LoopRect, 1);
@@ -319,15 +319,15 @@ void MainWindow(mu_Context *Context) {
     AudioData l_Audio[PAP_TotalAudio];
     uint8_t l_AudioIDs[PAP_TotalAudio];
 
-    for (int i = 0; i < PAP_TotalAudio; i++) {
+    for (uint32_t i = 0; i < PAP_TotalAudio; i++) {
       if (Audio[i].Path[0] != 0) {
         l_Audio[Audio[i].LayoutOrder] = Audio[i];
         l_AudioIDs[Audio[i].LayoutOrder] = i;
       }
     }
 
-    for (int i = 0; i < PAP_TotalAudio; i++) {
-      if (l_Audio[i].Path[0] == 0)
+    for (uint32_t i = 0; i < PAP_TotalAudio; i++) {
+      if (Audio[l_AudioIDs[i]].Path[0] == 0)
         continue;
 
       if (strcmp(l_Audio[i].AssignedList, CurrentCategory) != 0)
