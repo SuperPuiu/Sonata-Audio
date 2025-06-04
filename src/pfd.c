@@ -13,13 +13,8 @@
 char ResultBuffer[PATH_MAX];
 
 const char *OpenDialogue(enum DialogueOption Option) {
-  FILE *FilePointer;
+  FILE *FilePointer = popen(Option == PFD_DIRECTORY ? "zenity --file-selection --directory" : "zenity --file-selection", "r");
   
-  if (Option == PFD_DIRECTORY)
-    FilePointer = popen("zenity --file-selection --directory", "r");
-  else
-    FilePointer = popen("zenity --file-selection", "r");
-
   if (!FilePointer) {
     printf("error: %s\n", strerror(errno));
     return NULL;
