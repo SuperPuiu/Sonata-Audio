@@ -168,7 +168,7 @@ void MainWindow(mu_Context *Context) {
   if (!PopupContainer->open) {PopupOpen = false;}
 
   /* Title */
-  if (mu_begin_window_ex(Context, "Puius Audio Player", SA_Title, TitleOpt)) {
+  if (mu_begin_window_ex(Context, "Sonata Audio", SA_Title, TitleOpt)) {
     mu_end_window(Context);
   } else {
     Running = false;
