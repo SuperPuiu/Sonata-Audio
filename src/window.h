@@ -1,5 +1,5 @@
-#ifndef __PAPWINDOW__
-#define __PAPWINDOW__
+#ifndef __SAWINDOW__
+#define __SAWINDOW__
 
 #include <SDL3/SDL.h>
 #include <stdint.h>
@@ -12,12 +12,12 @@ uint32_t Buffer[WINDOW_WIDTH * WINDOW_HEIGHT];
 #ifndef __WINDOW_FUNC__
 #define __WINDOW_FUNC__
 
-void PAP_PutPixel(int X, int Y, uint32_t PixelData) {
+void SA_PutPixel(int X, int Y, uint32_t PixelData) {
   assert(Y * WINDOW_WIDTH + X <= WINDOW_WIDTH * WINDOW_HEIGHT);
   Buffer[Y * WINDOW_WIDTH + X] = PixelData;
 }
 
-uint32_t PAP_GetPixel(int X, int Y) {
+uint32_t SA_GetPixel(int X, int Y) {
   assert(Y * WINDOW_WIDTH + X <= WINDOW_WIDTH * WINDOW_HEIGHT);
   return Buffer[Y * WINDOW_WIDTH + X];
 }
@@ -38,7 +38,7 @@ XImage *l_XImage;
 
 void OpenWindow(void) {
   /* Let SDL carry the creation of the window for us */
-  SDL_Window *MainWindow = SDL_CreateWindow("Puius Audio Player", WINDOW_WIDTH, WINDOW_HEIGHT, 0);
+  SDL_Window *MainWindow = SDL_CreateWindow("Sonata Audio", WINDOW_WIDTH, WINDOW_HEIGHT, 0);
 
   if (!MainWindow)
     SDL_Log("OpenWindow: %s", SDL_GetError());
@@ -108,7 +108,7 @@ LRESULT CALLBACK CustomRedrawWindow(HWND l_HWND, UINT Message, WPARAM l_WPARAM, 
 }
 
 void OpenWindow(void) {
-  SDL_Window *Window = SDL_CreateWindow("Puius Audio Player", WINDOW_WIDTH, WINDOW_HEIGHT, 0);
+  SDL_Window *Window = SDL_CreateWindow("Sonata Audio", WINDOW_WIDTH, WINDOW_HEIGHT, 0);
   ID = (HWND)SDL_GetPointerProperty(SDL_GetWindowProperties(Window), SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
 
   SDL_WNDPROC = (WNDPROC)SetWindowLongPtr(GetActiveWindow(), GWLP_WNDPROC, (LONG_PTR)&CustomRedrawWindow);
@@ -128,4 +128,4 @@ void ClearWindow(uint32_t BackgroundColor) {
 }
 
 #endif /* __WINDOW_FUNC__ */
-#endif /* __PAPWINDOW__ */
+#endif /* __SAWINDOW__ */

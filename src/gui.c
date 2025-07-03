@@ -13,6 +13,7 @@
 #include <SDL3/SDL_mixer.h>
 #endif
 
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -33,13 +34,13 @@ static float AudioFloat = MIX_MAX_VOLUME;
 static bool InfoOpen = false, PopupOpen = false;
 static bool PausedMusic = false; /* Paused using the button */
 
-static mu_Rect PAP_Title, PAP_Below;
-static mu_Rect PAP_Playlist, PAP_Popup;
-static mu_Rect PAP_InfoFrame, PAP_Category;
-static mu_Rect PAP_Popup;
+static mu_Rect SA_Title, SA_Below;
+static mu_Rect SA_Playlist, SA_Popup;
+static mu_Rect SA_InfoFrame, SA_Category;
+static mu_Rect SA_Popup;
 
 char *CurrentCategory = "All";
-char Categories[PAP_MAX_CATEGORIES][32];
+char Categories[SA_MAX_CATEGORIES][32];
 static const char *InteractButtonText = "Pause";
 static const char *LoopButtonText = "No loop";
 
@@ -58,8 +59,8 @@ int TextHeight(mu_Font font) {
   return r_get_text_height();
 }
 
-int PAP_GetAudioByOrder(uint8_t RequestedOrder) {
-  for (uint32_t i = 0; i < PAP_TotalAudio; i++) {
+int SA_GetAudioByOrder(uint8_t RequestedOrder) {
+  for (uint32_t i = 0; i < SA_TotalAudio; i++) {
     if (Audio[i].LayoutOrder == RequestedOrder)
       return i;
   }
@@ -71,7 +72,7 @@ void FuncRemoveAudio() {
   AudioRemove(SelectedAudio);
 }
 
-int PAP_AudioButton(mu_Context *Context, const char *Name, int AudioID) {
+int SA_AudioButton(mu_Context *Context, const char *Name, int AudioID) {
   mu_Id ButtonID = mu_get_id(Context, &AudioID, sizeof(AudioID));
   
   mu_Rect Rect = mu_layout_next(Context);
@@ -96,8 +97,8 @@ int PAP_AudioButton(mu_Context *Context, const char *Name, int AudioID) {
   }
 
   if (SlidingAudio == AudioID) {
-    int UpperAudio = PAP_GetAudioByOrder(Audio[AudioID].LayoutOrder + 1);
-    int LowerAudio = PAP_GetAudioByOrder(Audio[AudioID].LayoutOrder - 1);
+    int UpperAudio = SA_GetAudioByOrder(Audio[AudioID].LayoutOrder + 1);
+    int LowerAudio = SA_GetAudioByOrder(Audio[AudioID].LayoutOrder - 1);
 
     if (LowerAudio > -1) {
       if (mu_mouse_over(Context, (mu_Rect){Slider.x, Slider.y - Slider.h - Context->style->padding, Slider.w, Slider.h})) {
@@ -122,7 +123,7 @@ int PAP_AudioButton(mu_Context *Context, const char *Name, int AudioID) {
   return Result;
 }
 
-int PAP_Slider(mu_Context *Context, mu_Real *Value, int Low, int High) {
+int SA_Slider(mu_Context *Context, mu_Real *Value, int Low, int High) {
   int Result = 0, ScrollSpeed = Context->key_down & MU_KEY_SHIFT ? 1 : 2;
   mu_Real Last = *Value, l_Value = Last;
   mu_Rect l_Rect = mu_layout_next(Context);
@@ -151,12 +152,12 @@ int PAP_Slider(mu_Context *Context, mu_Real *Value, int Low, int High) {
 }
 
 void InitializeGUI() {
-  PAP_Title = (mu_Rect){0, 0, WINDOW_WIDTH, 20};
-  PAP_Below = (mu_Rect){0, WINDOW_HEIGHT - BELOW_HEIGHT, WINDOW_WIDTH, BELOW_HEIGHT};
-  PAP_Playlist = (mu_Rect){WINDOW_WIDTH / 2 - PLAYLIST_WIDTH / 2, WINDOW_HEIGHT / 2 - PLAYLIST_HEIGHT / 2, PLAYLIST_WIDTH, PLAYLIST_HEIGHT};
-  PAP_InfoFrame = (mu_Rect){WINDOW_WIDTH / 2 - INFO_WIDTH / 2, WINDOW_HEIGHT / 2 - INFO_HEIGHT / 2, INFO_WIDTH, INFO_HEIGHT};
-  PAP_Category = (mu_Rect){PAP_Playlist.x, PAP_Playlist.y - CATEGORY_HEIGHT - 3, CATEGORY_WIDTH, CATEGORY_HEIGHT};
-  PAP_Popup = (mu_Rect){WINDOW_WIDTH / 2 - POPUP_WIDTH / 2, WINDOW_HEIGHT / 2 - POPUP_HEIGHT / 2, POPUP_WIDTH, POPUP_HEIGHT};
+  SA_Title = (mu_Rect){0, 0, WINDOW_WIDTH, 20};
+  SA_Below = (mu_Rect){0, WINDOW_HEIGHT - BELOW_HEIGHT, WINDOW_WIDTH, BELOW_HEIGHT};
+  SA_Playlist = (mu_Rect){WINDOW_WIDTH / 2 - PLAYLIST_WIDTH / 2, WINDOW_HEIGHT / 2 - PLAYLIST_HEIGHT / 2, PLAYLIST_WIDTH, PLAYLIST_HEIGHT};
+  SA_InfoFrame = (mu_Rect){WINDOW_WIDTH / 2 - INFO_WIDTH / 2, WINDOW_HEIGHT / 2 - INFO_HEIGHT / 2, INFO_WIDTH, INFO_HEIGHT};
+  SA_Category = (mu_Rect){SA_Playlist.x, SA_Playlist.y - CATEGORY_HEIGHT - 3, CATEGORY_WIDTH, CATEGORY_HEIGHT};
+  SA_Popup = (mu_Rect){WINDOW_WIDTH / 2 - POPUP_WIDTH / 2, WINDOW_HEIGHT / 2 - POPUP_HEIGHT / 2, POPUP_WIDTH, POPUP_HEIGHT};
 }
 
 void MainWindow(mu_Context *Context) {
@@ -167,7 +168,7 @@ void MainWindow(mu_Context *Context) {
   if (!PopupContainer->open) {PopupOpen = false;}
 
   /* Title */
-  if (mu_begin_window_ex(Context, "Puius Audio Player", PAP_Title, TitleOpt)) {
+  if (mu_begin_window_ex(Context, "Puius Audio Player", SA_Title, TitleOpt)) {
     mu_end_window(Context);
   } else {
     Running = false;
@@ -175,7 +176,7 @@ void MainWindow(mu_Context *Context) {
   }
 
   /* Below */
-  if (mu_begin_window_ex(Context, "BELOW", PAP_Below, BelowOpt)) {
+  if (mu_begin_window_ex(Context, "BELOW", SA_Below, BelowOpt)) {
     mu_Rect InteractionRect = {WINDOW_WIDTH / 2 - 105, 50, 100, 20};
     mu_Rect LoopRect = {InteractionRect.x + 105, InteractionRect.y, InteractionRect.w, InteractionRect.h};
     mu_Rect VolumeRect = {WINDOW_WIDTH - 110, 50, 100, 20};
@@ -288,7 +289,7 @@ void MainWindow(mu_Context *Context) {
     mu_label(Context, "Volume:");
 
     mu_layout_set_next(Context, (mu_Rect){WINDOW_WIDTH / 2 - 225, 30, 450, 15}, 1);
-    if (PAP_Slider(Context, &l_AudioPosition, 0, AudioDuration)) {
+    if (SA_Slider(Context, &l_AudioPosition, 0, AudioDuration)) {
       if (!Mix_PausedMusic())
         Mix_PauseMusic();
 
@@ -301,7 +302,7 @@ void MainWindow(mu_Context *Context) {
     l_AudioPosition = AudioPosition;
     
     mu_layout_set_next(Context, VolumeRect, 1);
-    if (PAP_Slider(Context, &AudioFloat, 0, 128)) {
+    if (SA_Slider(Context, &AudioFloat, 0, 128)) {
       AudioVolume = (int)AudioFloat;
       Mix_VolumeMusic(AudioVolume);
     }
@@ -310,23 +311,26 @@ void MainWindow(mu_Context *Context) {
   }
   
   /* Playlist */
-  if (mu_begin_window_ex(Context, "PLAYLIST", PAP_Playlist, PlaylistOpt)) {
+  if (mu_begin_window_ex(Context, "PLAYLIST", SA_Playlist, PlaylistOpt)) {
     int l_Width[] = {PLAYLIST_WIDTH - 20};
 
     mu_Container *Container = mu_get_container(Context, "Menu");
     if (SelectedAudio == -1) {Container->open = 0;}
     
-    AudioData l_Audio[PAP_TotalAudio];
-    uint8_t l_AudioIDs[PAP_TotalAudio];
+    AudioData l_Audio[SA_TotalAudio];
+    uint8_t l_AudioIDs[SA_TotalAudio];
+    
+    memset(l_Audio, 0, sizeof(l_Audio));
+    memset(l_AudioIDs, 0, sizeof(l_AudioIDs));
 
-    for (uint32_t i = 0; i < PAP_TotalAudio; i++) {
+    for (uint32_t i = 0; i < SA_TotalAudio; i++) {
       if (Audio[i].Path[0] != 0) {
         l_Audio[Audio[i].LayoutOrder] = Audio[i];
         l_AudioIDs[Audio[i].LayoutOrder] = i;
       }
     }
 
-    for (uint32_t i = 0; i < PAP_TotalAudio; i++) {
+    for (uint32_t i = 0; i < SA_TotalAudio; i++) {
       if (Audio[l_AudioIDs[i]].Path[0] == 0)
         continue;
 
@@ -334,7 +338,7 @@ void MainWindow(mu_Context *Context) {
         continue;
 
       mu_layout_row(Context, 1, l_Width, 25);
-      PAP_AudioButton(Context, l_Audio[i].Title, l_AudioIDs[i]);
+      SA_AudioButton(Context, l_Audio[i].Title, l_AudioIDs[i]);
     }
     
     mu_Rect l_Rect = mu_layout_next(Context);
@@ -370,8 +374,8 @@ void MainWindow(mu_Context *Context) {
   }
   
   /* Directories */
-  if (mu_begin_window_ex(Context, "CATEGORIES", PAP_Category, CategoryOpt)) { 
-    int l_Widths[PAP_MAX_CATEGORIES];
+  if (mu_begin_window_ex(Context, "CATEGORIES", SA_Category, CategoryOpt)) { 
+    int l_Widths[SA_MAX_CATEGORIES];
     static uint8_t TotalCategoryButtons = 2;
     
     for (uint8_t i = 0; i < TotalCategoryButtons - 1; i++)
@@ -383,7 +387,7 @@ void MainWindow(mu_Context *Context) {
     if (mu_button(Context, "All"))
       CurrentCategory = "All";
     
-    for (uint8_t i = 0; i < PAP_MAX_CATEGORIES; i++) {
+    for (uint8_t i = 0; i < SA_MAX_CATEGORIES; i++) {
       if (Categories[i][0] == 0)
         continue;
        
@@ -391,9 +395,9 @@ void MainWindow(mu_Context *Context) {
         CurrentCategory = Categories[i];
     }
     
-    if (TotalCategoryButtons - 1 < PAP_MAX_CATEGORIES) {
+    if (TotalCategoryButtons - 1 < SA_MAX_CATEGORIES) {
       if (mu_button(Context, "+")) {
-        for (uint8_t i = 0; i < PAP_MAX_CATEGORIES; i++) {
+        for (uint8_t i = 0; i < SA_MAX_CATEGORIES; i++) {
           if (Categories[i][0] == 0) {
             char Buf[5];
           
@@ -414,7 +418,7 @@ void MainWindow(mu_Context *Context) {
   PopupContainer->zindex = 3;
 
   /* Popup */
-  if (mu_begin_window_ex(Context, "POPUP", PAP_Popup, PopupOpt)) {
+  if (mu_begin_window_ex(Context, "POPUP", SA_Popup, PopupOpt)) {
     Context->hover_root = Context->next_hover_root = PopupContainer;
     mu_bring_to_front(Context, PopupContainer);
 
@@ -442,7 +446,7 @@ void MainWindow(mu_Context *Context) {
   InfoContainer->zindex = 2;
   
   /* INFO */
-  if (mu_begin_window_ex(Context, "INFO", PAP_InfoFrame, InfoFrameOpt)) {
+  if (mu_begin_window_ex(Context, "INFO", SA_InfoFrame, InfoFrameOpt)) {
     Context->hover_root = Context->next_hover_root = InfoContainer;
     mu_bring_to_front(Context, InfoContainer);
 

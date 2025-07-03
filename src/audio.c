@@ -24,7 +24,7 @@ AudioData *Audio;
 
 bool LoopLock = false; /* Used for LOOP_ALL functionality */
 
-uint32_t PAP_TotalAudio = 2;
+uint32_t SA_TotalAudio = 2;
 int AudioVolume = MIX_MAX_VOLUME, AudioCurrentIndex = -1;
 
 static Mix_Music *Music;
@@ -42,18 +42,18 @@ void InitializeAudio() {
     Mix_QuerySpec(&Specifications.freq, &Specifications.format, &Specifications.channels);
   }
   
-  Audio = malloc(sizeof(AudioData) * PAP_TotalAudio);
+  Audio = malloc(sizeof(AudioData) * SA_TotalAudio);
   
   Mix_VolumeMusic(AudioVolume);
 }
 
 void AudioRemove(uint32_t Index) {
-  if (Index == PAP_TotalAudio || Audio[Index].Path[0] == 0)
+  if (Index == SA_TotalAudio || Audio[Index].Path[0] == 0)
     return;
   
   memset(&Audio[Index], 0, sizeof(AudioData));
 
-  for (uint32_t i = Index + 1; i < PAP_TotalAudio; i++) {
+  for (uint32_t i = Index + 1; i < SA_TotalAudio; i++) {
     if (Audio[Index].Path[0] == 0)
       continue;
 
@@ -62,7 +62,7 @@ void AudioRemove(uint32_t Index) {
 }
 
 int GetEmptyIndex() {
-  for (uint32_t i = 0; i < PAP_TotalAudio; i++)
+  for (uint32_t i = 0; i < SA_TotalAudio; i++)
     if (Audio[i].Path[0] == 0)
       return i;
   return -1;
@@ -71,7 +71,7 @@ int GetEmptyIndex() {
 int GetNextIndex(uint32_t Index) {
   uint32_t LayoutOrder = Audio[Index].LayoutOrder;
 
-  for (uint32_t i = 0; i < PAP_TotalAudio; i++) {
+  for (uint32_t i = 0; i < SA_TotalAudio; i++) {
     if (Audio[Index].Path[0] == 0)
       continue;
 
@@ -89,7 +89,7 @@ int GetAudioIndex(char *Path) {
   if (Path == NULL)
     return -1;
 
-  for (uint32_t i = 0; i < PAP_TotalAudio; i++) {
+  for (uint32_t i = 0; i < SA_TotalAudio; i++) {
     if (Audio[i].Path[0] == 0)
       continue;
 
@@ -117,17 +117,17 @@ int AddAudio(char *Path, char *Category) {
   const char *TagCopyright = NULL;
 
   if (Index == -1) {
-    AudioData *l_Audio = malloc(sizeof(AudioData) * (PAP_TotalAudio * 2));
+    AudioData *l_Audio = malloc(sizeof(AudioData) * (SA_TotalAudio * 2));
     
-    Index = PAP_TotalAudio;
+    Index = SA_TotalAudio;
 
-    for (uint16_t i = 0; i < PAP_TotalAudio; i++)
+    for (uint16_t i = 0; i < SA_TotalAudio; i++)
       memcpy(&l_Audio[i], &Audio[i], sizeof(AudioData));
 
-    for (uint16_t i = PAP_TotalAudio; i < PAP_TotalAudio * 2; i++)
+    for (uint16_t i = SA_TotalAudio; i < SA_TotalAudio * 2; i++)
       memset(&l_Audio[i], 0, sizeof(AudioData));
 
-    PAP_TotalAudio *= 2;
+    SA_TotalAudio *= 2;
     free(Audio);
     Audio = l_Audio;
   }

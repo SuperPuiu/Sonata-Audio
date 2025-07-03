@@ -77,14 +77,14 @@ void FlushBuffers(void) {
           uint8_t TextureAlpha = GetAtlasColor(Texture, CurrentX - Source->x, CurrentY - Source->y);
 
           if (TextureAlpha > 0x00) {
-            uint32_t CurrentPixel = PAP_GetPixel(CurrentX, CurrentY);
+            uint32_t CurrentPixel = SA_GetPixel(CurrentX, CurrentY);
             mu_Color Color = {ColorBuffer[i].r, ColorBuffer[i].g, ColorBuffer[i].b, TextureAlpha};
-            PAP_PutPixel(CurrentX, CurrentY, ColorToNumber(BlendPixel(NumberToColor(CurrentPixel), Color)));
+            SA_PutPixel(CurrentX, CurrentY, ColorToNumber(BlendPixel(NumberToColor(CurrentPixel), Color)));
           }
           /* Other */
         } else {
-          mu_Color NewColor = BlendPixel(NumberToColor(PAP_GetPixel(CurrentX, CurrentY)), ColorBuffer[i]);
-          PAP_PutPixel(CurrentX, CurrentY, ColorToNumber(NewColor));
+          mu_Color NewColor = BlendPixel(NumberToColor(SA_GetPixel(CurrentX, CurrentY)), ColorBuffer[i]);
+          SA_PutPixel(CurrentX, CurrentY, ColorToNumber(NewColor));
         }
 
       }

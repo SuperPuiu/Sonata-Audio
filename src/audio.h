@@ -1,8 +1,6 @@
 #ifndef __PAPAUDIO__
 #define __PAPAUDIO__
 
-#define PAP_MAX_AUDIO 256
-
 #include <stdint.h>
 
 #ifndef WINDOWS
@@ -27,7 +25,7 @@ typedef struct {
 extern AudioData *Audio;
 extern double AudioDuration, AudioPosition;
 extern int AudioVolume, AudioCurrentIndex;
-extern uint32_t PAP_TotalAudio; 
+extern uint32_t SA_TotalAudio; 
 
 void AudioRemove(uint32_t Index);
 void UpdateAudioPosition();

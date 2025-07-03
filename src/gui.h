@@ -1,5 +1,5 @@
-#ifndef __PAPGUI__
-#define __PAPGUI__
+#ifndef __SAGUI__
+#define __SAGUI__
 
 #define BELOW_HEIGHT      80
 #define PLAYLIST_WIDTH    550
@@ -11,7 +11,7 @@
 #define POPUP_WIDTH       250
 #define POPUP_HEIGHT      85
 
-#define PAP_MAX_CATEGORIES 32
+#define SA_MAX_CATEGORIES 32
 
 #include "microui.h"
 
