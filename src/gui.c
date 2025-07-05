@@ -20,7 +20,7 @@
 int LoopStatus = LOOP_NONE;
 static int TitleOpt     = MU_OPT_NORESIZE | MU_OPT_NOSCROLL | MU_OPT_NOFRAME | MU_OPT_ANCHORED;
 static int BelowOpt     = MU_OPT_NORESIZE | MU_OPT_NOSCROLL | MU_OPT_NOCLOSE | MU_OPT_NOTITLE | MU_OPT_NOFRAME;
-static int PlaylistOpt  = MU_OPT_NOTITLE | MU_OPT_NOBORDER | MU_OPT_NOINTERACT;
+static int PlaylistOpt  = MU_OPT_NOTITLE | MU_OPT_NOBORDER | MU_OPT_NOINTERACT | MU_OPT_NOFRAME;
 static int CategoryOpt  = MU_OPT_NOTITLE | MU_OPT_NOBORDER | MU_OPT_NOINTERACT;
 
 static int PopupOpt = 0;
@@ -43,6 +43,8 @@ char *CurrentCategory = "All";
 char Categories[SA_MAX_CATEGORIES][32];
 static const char *InteractButtonText = "Pause";
 static const char *LoopButtonText = "No loop";
+
+static mu_Id CurrentCategoryID = 0;
 
 void (*PopupAction)(void);
 
@@ -123,6 +125,28 @@ int SA_AudioButton(mu_Context *Context, const char *Name, int AudioID) {
   return Result;
 }
 
+/* Based off of mu_button_ex implementation. */
+int SA_CategoryButton(mu_Context *Context, const char *Text, int Opt) {
+  int Result = 0;
+  mu_Rect Rect = mu_layout_next(Context);
+  
+  mu_Id ID = mu_get_id(Context, Text, strlen(Text));
+  mu_update_control(Context, ID, Rect, Opt);
+  
+  if (CurrentCategoryID == 0)
+    CurrentCategoryID = ID;
+
+  if (Context->mouse_pressed == MU_MOUSE_LEFT && Context->focus == ID) {
+    CurrentCategoryID = ID;
+    Result |= MU_RES_SUBMIT;
+  }
+  
+  mu_draw_control_frame(Context, ID, Rect, ID != CurrentCategoryID ? MU_COLOR_BUTTON : MU_COLOR_BASE, Opt);
+  mu_draw_control_text(Context, Text, Rect, MU_COLOR_TEXT, Opt);
+
+  return Result;
+}
+
 int SA_Slider(mu_Context *Context, mu_Real *Value, int Low, int High) {
   int Result = 0, ScrollSpeed = Context->key_down & MU_KEY_SHIFT ? 1 : 2;
   mu_Real Last = *Value, l_Value = Last;
@@ -154,9 +178,9 @@ int SA_Slider(mu_Context *Context, mu_Real *Value, int Low, int High) {
 void InitializeGUI() {
   SA_Title = (mu_Rect){0, 0, WINDOW_WIDTH, 20};
   SA_Below = (mu_Rect){0, WINDOW_HEIGHT - BELOW_HEIGHT, WINDOW_WIDTH, BELOW_HEIGHT};
-  SA_Playlist = (mu_Rect){WINDOW_WIDTH / 2 - PLAYLIST_WIDTH / 2, WINDOW_HEIGHT / 2 - PLAYLIST_HEIGHT / 2, PLAYLIST_WIDTH, PLAYLIST_HEIGHT};
+  SA_Playlist = (mu_Rect){CATEGORY_WIDTH, 24, PLAYLIST_WIDTH, PLAYLIST_HEIGHT};
   SA_InfoFrame = (mu_Rect){WINDOW_WIDTH / 2 - INFO_WIDTH / 2, WINDOW_HEIGHT / 2 - INFO_HEIGHT / 2, INFO_WIDTH, INFO_HEIGHT};
-  SA_Category = (mu_Rect){SA_Playlist.x, SA_Playlist.y - CATEGORY_HEIGHT - 3, CATEGORY_WIDTH, CATEGORY_HEIGHT};
+  SA_Category = (mu_Rect){0, 24, CATEGORY_WIDTH, CATEGORY_HEIGHT};
   SA_Popup = (mu_Rect){WINDOW_WIDTH / 2 - POPUP_WIDTH / 2, WINDOW_HEIGHT / 2 - POPUP_HEIGHT / 2, POPUP_WIDTH, POPUP_HEIGHT};
 }
 
@@ -344,7 +368,7 @@ void MainWindow(mu_Context *Context) {
     mu_Rect l_Rect = mu_layout_next(Context);
     mu_layout_set_next(Context, (mu_Rect){l_Rect.x + l_Width[0] / 2 - 35, l_Rect.y, 70, 20}, 0);
 
-    if (mu_button(Context, "+")) {
+    if (mu_button(Context, "Add song")) {
       const char *Path = OpenDialogue(PFD_FILE);
 
       if (Path)
@@ -375,26 +399,26 @@ void MainWindow(mu_Context *Context) {
   
   /* Directories */
   if (mu_begin_window_ex(Context, "CATEGORIES", SA_Category, CategoryOpt)) { 
-    int l_Widths[SA_MAX_CATEGORIES];
     static uint8_t TotalCategoryButtons = 2;
     
-    for (uint8_t i = 0; i < TotalCategoryButtons - 1; i++)
-      l_Widths[i] = 70;
-    
-    l_Widths[TotalCategoryButtons - 1] = 20;
-    
-    mu_layout_row(Context, TotalCategoryButtons, l_Widths, TotalCategoryButtons < 9 ? 20 : 15);
-    if (mu_button(Context, "All"))
+    mu_layout_row(Context, 1, (int[]){70}, 20);
+    if (SA_CategoryButton(Context, "All", 0))
       CurrentCategory = "All";
     
     for (uint8_t i = 0; i < SA_MAX_CATEGORIES; i++) {
       if (Categories[i][0] == 0)
         continue;
        
-      if (mu_button(Context, Categories[i]))
+      if (SA_CategoryButton(Context, Categories[i], 0))
         CurrentCategory = Categories[i];
     }
     
+    mu_Rect PlusRect = mu_layout_next(Context);
+    PlusRect.x = CATEGORY_WIDTH / 2 - 8;
+    PlusRect.w = 15;
+    PlusRect.h = 15;
+    
+    mu_layout_set_next(Context, PlusRect, 0);
     if (TotalCategoryButtons - 1 < SA_MAX_CATEGORIES) {
       if (mu_button(Context, "+")) {
         for (uint8_t i = 0; i < SA_MAX_CATEGORIES; i++) {

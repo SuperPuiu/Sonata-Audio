@@ -1,19 +1,20 @@
 #ifndef __SAGUI__
 #define __SAGUI__
 
+#include "microui.h"
+#include "render.h"
+
 #define BELOW_HEIGHT      80
-#define PLAYLIST_WIDTH    550
-#define PLAYLIST_HEIGHT   300
 #define INFO_WIDTH        300
 #define INFO_HEIGHT       200
-#define CATEGORY_WIDTH    PLAYLIST_WIDTH
-#define CATEGORY_HEIGHT   32
+#define CATEGORY_WIDTH    80
+#define CATEGORY_HEIGHT   WINDOW_HEIGHT - BELOW_HEIGHT
 #define POPUP_WIDTH       250
-#define POPUP_HEIGHT      85
+#define POPUP_HEIGHT      80
+#define PLAYLIST_WIDTH    WINDOW_WIDTH - CATEGORY_WIDTH - 5
+#define PLAYLIST_HEIGHT   WINDOW_HEIGHT - BELOW_HEIGHT
 
 #define SA_MAX_CATEGORIES 32
-
-#include "microui.h"
 
 enum LoopEnum {
   LOOP_NONE,
