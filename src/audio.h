@@ -10,7 +10,7 @@
 #endif
 
 typedef struct {
-  char Title[256];
+  char Title[128];
   char Path[PATH_MAX];
   
   char TagArtist[128];
