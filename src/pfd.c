@@ -115,7 +115,7 @@ const char *OpenDialogue(enum DialogueOption Option) {
       PidlRoot = NULL;
     }
     
-    return Status == true ? ResultBuffer : NULL;
+    return Status == TRUE ? ResultBuffer : NULL;
   } else {
     OPENFILENAME OFN;
     PopulateOFN(&OFN);
