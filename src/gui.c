@@ -18,7 +18,7 @@
 #include <string.h>
 
 int LoopStatus = LOOP_NONE;
-static int TitleOpt     = MU_OPT_NORESIZE | MU_OPT_NOSCROLL | MU_OPT_NOFRAME | MU_OPT_ANCHORED;
+static int TitleOpt     = MU_OPT_NORESIZE | MU_OPT_NOSCROLL | MU_OPT_NOFRAME | MU_OPT_ANCHORED | MU_OPT_ALIGNCENTER;
 static int BelowOpt     = MU_OPT_NORESIZE | MU_OPT_NOSCROLL | MU_OPT_NOCLOSE | MU_OPT_NOTITLE | MU_OPT_NOFRAME;
 static int PlaylistOpt  = MU_OPT_NOTITLE | MU_OPT_NOBORDER | MU_OPT_NOINTERACT | MU_OPT_NOFRAME;
 static int CategoryOpt  = MU_OPT_NOTITLE | MU_OPT_NOBORDER | MU_OPT_NOINTERACT;
@@ -208,9 +208,12 @@ void MainWindow(mu_Context *Context) {
     mu_layout_set_next(Context, (mu_Rect){2, 50, 100, 20}, 1);
     if (mu_button(Context, "Load directory")) {
       const char *Path = OpenDialogue(PFD_DIRECTORY);
-      size_t PathLen = strlen(Path);
+      
+      if (!Path) {
+        SDL_Log("Directory is NULL.");
+      } else {
+        size_t PathLen = strlen(Path);
 
-      if (Path) {
         #ifndef WINDOWS
         DIR *Directory;
         struct dirent *Entry;
@@ -242,16 +245,14 @@ void MainWindow(mu_Context *Context) {
           }
 
           closedir(Directory);
-        } else {
-          SDL_Log("Directory is NULL.");
-        }
+        } 
         #else
         char AudioPath[MAX_PATH];
 
         TCHAR DirectoryPath[MAX_PATH];
         HANDLE HandleFind = INVALID_HANDLE_VALUE;
         WIN32_FIND_DATA FileData;
-
+        
         strcat(DirectoryPath, Path);
         strcat(DirectoryPath, "\\*");
         memcpy(AudioPath, Path, PathLen);
@@ -368,7 +369,7 @@ void MainWindow(mu_Context *Context) {
     mu_Rect l_Rect = mu_layout_next(Context);
     mu_layout_set_next(Context, (mu_Rect){l_Rect.x + l_Width[0] / 2 - 35, l_Rect.y, 70, 20}, 0);
 
-    if (mu_button(Context, "Add song")) {
+    if (mu_button(Context, "+")) {
       const char *Path = OpenDialogue(PFD_FILE);
 
       if (Path)
