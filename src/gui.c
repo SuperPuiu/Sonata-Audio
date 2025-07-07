@@ -22,6 +22,7 @@ static int TitleOpt     = MU_OPT_NORESIZE | MU_OPT_NOSCROLL | MU_OPT_NOFRAME | M
 static int BelowOpt     = MU_OPT_NORESIZE | MU_OPT_NOSCROLL | MU_OPT_NOCLOSE | MU_OPT_NOTITLE | MU_OPT_NOFRAME;
 static int PlaylistOpt  = MU_OPT_NOTITLE | MU_OPT_NOBORDER | MU_OPT_NOINTERACT | MU_OPT_NOFRAME;
 static int CategoryOpt  = MU_OPT_NOTITLE | MU_OPT_NOBORDER | MU_OPT_NOINTERACT;
+static int SearchOpt    = MU_OPT_NOTITLE | MU_OPT_NOBORDER | MU_OPT_NOINTERACT | MU_OPT_NOSCROLL;
 
 static int PopupOpt = 0;
 static int InfoFrameOpt = 0;
@@ -37,10 +38,11 @@ static bool PausedMusic = false; /* Paused using the button */
 static mu_Rect SA_Title, SA_Below;
 static mu_Rect SA_Playlist, SA_Popup;
 static mu_Rect SA_InfoFrame, SA_Category;
-static mu_Rect SA_Popup;
+static mu_Rect SA_Popup, SA_Search;
 
 char *CurrentCategory = "All";
 char Categories[SA_MAX_CATEGORIES][32];
+char SearchBuffer[128] = {0};
 static const char *InteractButtonText = "Pause";
 static const char *LoopButtonText = "No loop";
 
@@ -61,7 +63,7 @@ int TextHeight(mu_Font font) {
   return r_get_text_height();
 }
 
-int SA_GetAudioByOrder(uint8_t RequestedOrder) {
+int32_t SA_GetAudioByOrder(uint8_t RequestedOrder) {
   for (uint32_t i = 0; i < SA_TotalAudio; i++) {
     if (Audio[i].LayoutOrder == RequestedOrder)
       return i;
@@ -178,10 +180,11 @@ int SA_Slider(mu_Context *Context, mu_Real *Value, int Low, int High) {
 void InitializeGUI() {
   SA_Title = (mu_Rect){0, 0, WINDOW_WIDTH, 20};
   SA_Below = (mu_Rect){0, WINDOW_HEIGHT - BELOW_HEIGHT, WINDOW_WIDTH, BELOW_HEIGHT};
-  SA_Playlist = (mu_Rect){CATEGORY_WIDTH, 24, PLAYLIST_WIDTH, PLAYLIST_HEIGHT};
+  SA_Playlist = (mu_Rect){CATEGORY_WIDTH, 54, PLAYLIST_WIDTH, PLAYLIST_HEIGHT};
   SA_InfoFrame = (mu_Rect){WINDOW_WIDTH / 2 - INFO_WIDTH / 2, WINDOW_HEIGHT / 2 - INFO_HEIGHT / 2, INFO_WIDTH, INFO_HEIGHT};
   SA_Category = (mu_Rect){0, 24, CATEGORY_WIDTH, CATEGORY_HEIGHT};
   SA_Popup = (mu_Rect){WINDOW_WIDTH / 2 - POPUP_WIDTH / 2, WINDOW_HEIGHT / 2 - POPUP_HEIGHT / 2, POPUP_WIDTH, POPUP_HEIGHT};
+  SA_Search = (mu_Rect){SA_Playlist.x, SA_Playlist.y - 30, SEARCH_WIDTH, SEARCH_HEIGHT};
 }
 
 void MainWindow(mu_Context *Context) {
@@ -335,6 +338,13 @@ void MainWindow(mu_Context *Context) {
     mu_end_window(Context);
   }
   
+  /* Search */
+  if (mu_begin_window_ex(Context, "SEARCH", SA_Search, SearchOpt)) {
+    mu_layout_set_next(Context, (mu_Rect){-5, 0, SEARCH_WIDTH, 20}, 1);
+    mu_textbox(Context, SearchBuffer, sizeof(SearchBuffer));
+    mu_end_window(Context);
+  }
+
   /* Playlist */
   if (mu_begin_window_ex(Context, "PLAYLIST", SA_Playlist, PlaylistOpt)) {
     int l_Width[] = {PLAYLIST_WIDTH - 20};
@@ -361,6 +371,11 @@ void MainWindow(mu_Context *Context) {
 
       if (strcmp(l_Audio[i].AssignedList, CurrentCategory) != 0)
         continue;
+      
+      if (SearchBuffer[0] != 0) {
+        if (!strstr(l_Audio[i].Title, SearchBuffer))
+          continue;
+      }
 
       mu_layout_row(Context, 1, l_Width, 25);
       SA_AudioButton(Context, l_Audio[i].Title, l_AudioIDs[i]);
