@@ -44,7 +44,8 @@ enum {
   MU_COMMAND_RECT,
   MU_COMMAND_TEXT,
   MU_COMMAND_ICON,
-  MU_COMMAND_MAX
+  MU_COMMAND_MAX,
+  MU_COMMAND_INPUT
 };
 
 enum {
@@ -128,6 +129,7 @@ typedef struct { mu_BaseCommand base; mu_Rect rect; } mu_ClipCommand;
 typedef struct { mu_BaseCommand base; mu_Rect rect; mu_Color color; } mu_RectCommand;
 typedef struct { mu_BaseCommand base; mu_Font font; mu_Vec2 pos; mu_Color color; char str[1]; } mu_TextCommand;
 typedef struct { mu_BaseCommand base; mu_Rect rect; int id; mu_Color color; } mu_IconCommand;
+typedef struct { mu_BaseCommand base; uint8_t status; } mu_InptCommand;
 
 typedef union {
   int type;
@@ -137,6 +139,7 @@ typedef union {
   mu_RectCommand rect;
   mu_TextCommand text;
   mu_IconCommand icon;
+  mu_InptCommand input;
 } mu_Command;
 
 typedef struct {
