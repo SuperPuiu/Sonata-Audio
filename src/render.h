@@ -3,11 +3,13 @@
 
 #include "microui.h"
 #include <stdbool.h>
+#include <SDL3/SDL.h>
 
 #define WINDOW_WIDTH  640
 #define WINDOW_HEIGHT 480
 
 extern bool Running;
+extern SDL_Window *ProgramWindow;
 
 void r_init(void);
 void r_draw_rect(mu_Rect rect, mu_Color color);
