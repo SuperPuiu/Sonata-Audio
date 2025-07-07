@@ -93,6 +93,12 @@ int main(int argc, char **argv) {
         case MU_COMMAND_RECT: r_draw_rect(cmd->rect.rect, cmd->rect.color); break;
         case MU_COMMAND_ICON: r_draw_icon(cmd->icon.id, cmd->icon.rect, cmd->icon.color); break;
         case MU_COMMAND_CLIP: r_set_clip_rect(cmd->clip.rect); break;
+        case MU_COMMAND_INPUT:  
+          if (cmd->input.status) 
+            SDL_StartTextInput(ProgramWindow);
+          else
+            SDL_StopTextInput(ProgramWindow);
+          break;
       }
     }
 
