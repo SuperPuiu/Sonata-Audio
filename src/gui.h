@@ -31,5 +31,6 @@ int TextWidth(mu_Font font, const char *text, int len);
 int TextHeight(mu_Font font);
 void ProcessContextFrame(mu_Context *Context);
 void InitializeGUI();
+void RefreshPlaylist();
 
 #endif

@@ -38,7 +38,7 @@ static mu_Rect TextureBuffer[BUFFER_SIZE];
 static mu_Rect SourceBuffer[BUFFER_SIZE];
 static mu_Color ColorBuffer[BUFFER_SIZE];
 
-static unsigned int BufferIndex = 0;
+static uint32_t BufferIndex = 0;
 
 SDL_Window *ProgramWindow;
 
@@ -99,12 +99,9 @@ void FlushBuffers(void) {
         /* Textures */
         if (Source->w == Texture->w && Source->h == Texture->h) {
           uint8_t TextureAlpha = GetAtlasColor(Texture, CurrentX - Source->x, CurrentY - Source->y);
-
-          if (TextureAlpha > 0x00) {
-            uint32_t CurrentPixel = SA_GetPixel(CurrentX, CurrentY);
-            mu_Color Color = {ColorBuffer[i].r, ColorBuffer[i].g, ColorBuffer[i].b, TextureAlpha};
-            SA_PutPixel(CurrentX, CurrentY, ColorToNumber(BlendPixel(NumberToColor(CurrentPixel), Color)));
-          }
+          uint32_t CurrentPixel = SA_GetPixel(CurrentX, CurrentY);
+          mu_Color Color = {ColorBuffer[i].r, ColorBuffer[i].g, ColorBuffer[i].b, TextureAlpha};
+          SA_PutPixel(CurrentX, CurrentY, ColorToNumber(BlendPixel(NumberToColor(CurrentPixel), Color)));
           /* Other */
         } else {
           mu_Color NewColor = BlendPixel(NumberToColor(SA_GetPixel(CurrentX, CurrentY)), ColorBuffer[i]);

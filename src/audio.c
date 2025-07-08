@@ -176,7 +176,8 @@ int AddAudio(char *Path, char *Category) {
   memcpy(Audio[Index].AssignedList, Category, strlen(Category));
   
   Audio[Index].LayoutOrder = Index;
-
+  
+  RefreshPlaylist();
   Mix_FreeMusic(l_Music);
   return Index;
 }

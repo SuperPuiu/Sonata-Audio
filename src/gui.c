@@ -46,6 +46,10 @@ char SearchBuffer[128] = {0};
 static const char *InteractButtonText = "Pause";
 static const char *LoopButtonText = "No loop";
 
+static AudioData *PlaylistAudios;
+static uint8_t *PlaylistAudioIDs;
+static uint32_t PlaylistBufferSizes;
+
 static mu_Id CurrentCategoryID = 0;
 
 void (*PopupAction)(void);
@@ -106,23 +110,28 @@ int SA_AudioButton(mu_Context *Context, const char *Name, int AudioID) {
 
     if (LowerAudio > -1) {
       if (mu_mouse_over(Context, (mu_Rect){Slider.x, Slider.y - Slider.h - Context->style->padding, Slider.w, Slider.h})) {
-        Audio[AudioID].LayoutOrder -= 1;
-        Audio[LowerAudio].LayoutOrder += 1;
+        uint32_t LowerOrder = Audio[LowerAudio].LayoutOrder;
+        
+        Audio[LowerAudio].LayoutOrder = Audio[AudioID].LayoutOrder;
+        Audio[AudioID].LayoutOrder = LowerOrder;
       }
     }
 
     if (UpperAudio > -1) {
       if (mu_mouse_over(Context, (mu_Rect){Slider.x, Slider.y + Slider.h + Context->style->padding, Slider.w, Slider.h})) {
-        Audio[AudioID].LayoutOrder += 1;
-        Audio[UpperAudio].LayoutOrder -= 1;
+        uint32_t UpperOrder = Audio[UpperAudio].LayoutOrder;
+        
+        Audio[UpperAudio].LayoutOrder = Audio[AudioID].LayoutOrder;
+        Audio[AudioID].LayoutOrder = UpperOrder;
       }
     }
+
+    RefreshPlaylist();
   }
   
   mu_draw_control_frame(Context, ButtonID, Slider, MU_COLOR_BUTTON, MU_OPT_NOBORDER);
-  mu_draw_control_frame(Context, ButtonID, MainRect, AudioCurrentIndex != AudioID ? MU_COLOR_BUTTON : MU_COLOR_BASE, MU_OPT_NOBORDER); /* Main button frame */
+  mu_draw_control_frame(Context, ButtonID, MainRect, AudioCurrentIndex != AudioID ? MU_COLOR_BUTTON : MU_COLOR_BASE, MU_OPT_NOBORDER);
   mu_draw_control_text(Context, Name, MainRect, MU_COLOR_TEXT, 0);
-  // mu_draw_control_text();
 
   return Result;
 }
@@ -177,6 +186,48 @@ int SA_Slider(mu_Context *Context, mu_Real *Value, int Low, int High) {
   return Result;
 }
 
+void RefreshPlaylist() {
+  if (SA_TotalAudio > PlaylistBufferSizes) {
+    AudioData *l_Audio = realloc(PlaylistAudios, sizeof(AudioData) * SA_TotalAudio);
+
+    if (!l_Audio) {
+      SDL_Log("[FATAL]: Unable to realloc PlaylistAudios.\n");
+      exit(EXIT_FAILURE);
+    }
+
+    uint8_t *l_AudioIDs = realloc(PlaylistAudioIDs, sizeof(uint8_t) * SA_TotalAudio);
+
+    if (!l_AudioIDs) {
+      SDL_Log("[FATAL]: Unable to realloc PlaylistAudioIDs.\n");
+      exit(EXIT_FAILURE);
+    }
+
+    PlaylistAudios = l_Audio;
+    PlaylistAudioIDs = l_AudioIDs;
+  }
+
+  memset(PlaylistAudios, 0, sizeof(AudioData) * SA_TotalAudio);
+  memset(PlaylistAudioIDs, 0, sizeof(uint8_t) * SA_TotalAudio);
+
+  for (uint32_t i = 0; i < SA_TotalAudio; i++) {
+    if (Audio[i].Path[0] == 0)
+      continue;
+    
+    if (strcmp(Audio[i].AssignedList, CurrentCategory) != 0)
+      continue;
+    
+    if (SearchBuffer[0] != 0) {
+      if (!strstr(Audio[i].Title, SearchBuffer))
+        continue;
+    }
+
+    PlaylistAudios[Audio[i].LayoutOrder] = Audio[i];
+    PlaylistAudioIDs[Audio[i].LayoutOrder] = i;
+  }
+
+  PlaylistBufferSizes = SA_TotalAudio;
+}
+
 void InitializeGUI() {
   SA_Title = (mu_Rect){0, 0, WINDOW_WIDTH, 20};
   SA_Below = (mu_Rect){0, WINDOW_HEIGHT - BELOW_HEIGHT, WINDOW_WIDTH, BELOW_HEIGHT};
@@ -185,6 +236,10 @@ void InitializeGUI() {
   SA_Category = (mu_Rect){0, 24, CATEGORY_WIDTH, CATEGORY_HEIGHT};
   SA_Popup = (mu_Rect){WINDOW_WIDTH / 2 - POPUP_WIDTH / 2, WINDOW_HEIGHT / 2 - POPUP_HEIGHT / 2, POPUP_WIDTH, POPUP_HEIGHT};
   SA_Search = (mu_Rect){SA_Playlist.x, SA_Playlist.y - 30, SEARCH_WIDTH, SEARCH_HEIGHT};
+  
+  PlaylistBufferSizes = SA_TotalAudio;
+  PlaylistAudios = calloc(SA_TotalAudio, sizeof(AudioData));
+  PlaylistAudioIDs = calloc(SA_TotalAudio, sizeof(uint8_t));
 }
 
 void MainWindow(mu_Context *Context) {
@@ -341,7 +396,10 @@ void MainWindow(mu_Context *Context) {
   /* Search */
   if (mu_begin_window_ex(Context, "SEARCH", SA_Search, SearchOpt)) {
     mu_layout_set_next(Context, (mu_Rect){-5, 0, SEARCH_WIDTH, 20}, 1);
-    mu_textbox(Context, SearchBuffer, sizeof(SearchBuffer));
+    
+    if (mu_textbox(Context, SearchBuffer, sizeof(SearchBuffer)) & MU_RES_CHANGE)
+      RefreshPlaylist();
+
     mu_end_window(Context);
   }
 
@@ -352,33 +410,15 @@ void MainWindow(mu_Context *Context) {
     mu_Container *Container = mu_get_container(Context, "Menu");
     if (SelectedAudio == -1) {Container->open = 0;}
     
-    AudioData l_Audio[SA_TotalAudio];
-    uint8_t l_AudioIDs[SA_TotalAudio];
-    
-    memset(l_Audio, 0, sizeof(l_Audio));
-    memset(l_AudioIDs, 0, sizeof(l_AudioIDs));
-
-    for (uint32_t i = 0; i < SA_TotalAudio; i++) {
-      if (Audio[i].Path[0] != 0) {
-        l_Audio[Audio[i].LayoutOrder] = Audio[i];
-        l_AudioIDs[Audio[i].LayoutOrder] = i;
-      }
-    }
-
-    for (uint32_t i = 0; i < SA_TotalAudio; i++) {
-      if (Audio[l_AudioIDs[i]].Path[0] == 0)
+    for (uint32_t i = 0; i < PlaylistBufferSizes; i++) {
+      if (PlaylistAudios[i].Path[0] == 0)
         continue;
 
-      if (strcmp(l_Audio[i].AssignedList, CurrentCategory) != 0)
+      if (Audio[PlaylistAudioIDs[i]].Path[0] == 0)
         continue;
-      
-      if (SearchBuffer[0] != 0) {
-        if (!strstr(l_Audio[i].Title, SearchBuffer))
-          continue;
-      }
 
       mu_layout_row(Context, 1, l_Width, 25);
-      SA_AudioButton(Context, l_Audio[i].Title, l_AudioIDs[i]);
+      SA_AudioButton(Context, PlaylistAudios[i].Title, PlaylistAudioIDs[i]);
     }
     
     mu_Rect l_Rect = mu_layout_next(Context);
@@ -418,15 +458,19 @@ void MainWindow(mu_Context *Context) {
     static uint8_t TotalCategoryButtons = 2;
     
     mu_layout_row(Context, 1, (int[]){70}, 20);
-    if (SA_CategoryButton(Context, "All", 0))
+    if (SA_CategoryButton(Context, "All", 0)) {
       CurrentCategory = "All";
+      RefreshPlaylist();
+    }
     
     for (uint8_t i = 0; i < SA_MAX_CATEGORIES; i++) {
       if (Categories[i][0] == 0)
         continue;
        
-      if (SA_CategoryButton(Context, Categories[i], 0))
+      if (SA_CategoryButton(Context, Categories[i], 0)) {
         CurrentCategory = Categories[i];
+        RefreshPlaylist();
+      }
     }
     
     mu_Rect PlusRect = mu_layout_next(Context);
