@@ -3,6 +3,7 @@
 #include "render.h"
 #include "pfd.h"
 #include "audio.h"
+#include "gui_ext.h"
 
 #ifndef WINDOWS
 #include <dirent.h>
@@ -13,11 +14,11 @@
 #include <SDL3/SDL_mixer.h>
 #endif
 
+#include <ctype.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
-int LoopStatus = LOOP_NONE;
 static int TitleOpt     = MU_OPT_NORESIZE | MU_OPT_NOSCROLL | MU_OPT_NOFRAME | MU_OPT_ANCHORED | MU_OPT_ALIGNCENTER;
 static int BelowOpt     = MU_OPT_NORESIZE | MU_OPT_NOSCROLL | MU_OPT_NOCLOSE | MU_OPT_NOTITLE | MU_OPT_NOFRAME;
 static int PlaylistOpt  = MU_OPT_NOTITLE | MU_OPT_NOBORDER | MU_OPT_NOINTERACT | MU_OPT_NOFRAME;
@@ -26,8 +27,8 @@ static int SearchOpt    = MU_OPT_NOTITLE | MU_OPT_NOBORDER | MU_OPT_NOINTERACT |
 
 static int PopupOpt = 0;
 static int InfoFrameOpt = 0;
-static int SelectedAudio = -1;
-static int SlidingAudio = -1;
+int SelectedAudio = -1;
+int LoopStatus = LOOP_NONE;
 
 float l_AudioPosition;
 static float AudioFloat = MIX_MAX_VOLUME;
@@ -50,8 +51,6 @@ static AudioData *PlaylistAudios;
 static uint8_t *PlaylistAudioIDs;
 static uint32_t PlaylistBufferSizes;
 
-static mu_Id CurrentCategoryID = 0;
-
 void (*PopupAction)(void);
 
 int TextWidth(mu_Font font, const char *text, int len) {
@@ -67,126 +66,19 @@ int TextHeight(mu_Font font) {
   return r_get_text_height();
 }
 
-int32_t SA_GetAudioByOrder(uint8_t RequestedOrder) {
-  for (uint32_t i = 0; i < SA_TotalAudio; i++) {
-    if (Audio[i].LayoutOrder == RequestedOrder)
-      return i;
-  }
-
-  return -1;
-}
-
 void FuncRemoveAudio() {
   AudioRemove(SelectedAudio);
 }
 
-int SA_AudioButton(mu_Context *Context, const char *Name, int AudioID) {
-  mu_Id ButtonID = mu_get_id(Context, &AudioID, sizeof(AudioID));
-  
-  mu_Rect Rect = mu_layout_next(Context);
-  mu_Rect MainRect = {Rect.x + 20, Rect.y, Rect.w - 20, Rect.h};
-  mu_Rect Slider = {Rect.x, Rect.y, 15, Rect.h}; /* Might need a better name for this variable */
-
-  mu_update_control(Context, ButtonID, MainRect, 0);
-
-  int Result = 0;
-  
-  if (Context->mouse_pressed == MU_MOUSE_LEFT && mu_mouse_over(Context, MainRect)) {
-    PlayAudio(Audio[AudioID].Path);
-    Result |= MU_RES_CHANGE;
-  } else if (Context->mouse_pressed == MU_MOUSE_RIGHT && mu_mouse_over(Context, MainRect) && AudioID != AudioCurrentIndex) {
-    mu_open_popup(Context, "Menu");
-    SelectedAudio = AudioID;
-    Result |= MU_RES_CHANGE;
-  } else if (Context->mouse_pressed == MU_MOUSE_LEFT && mu_mouse_over(Context, Slider)) {
-    SlidingAudio = AudioID;
-  } else if (Context->mouse_down != MU_MOUSE_LEFT && AudioID == SlidingAudio) {
-    SlidingAudio = -1;
-  }
-
-  if (SlidingAudio == AudioID) {
-    int UpperAudio = SA_GetAudioByOrder(Audio[AudioID].LayoutOrder + 1);
-    int LowerAudio = SA_GetAudioByOrder(Audio[AudioID].LayoutOrder - 1);
-
-    if (LowerAudio > -1) {
-      if (mu_mouse_over(Context, (mu_Rect){Slider.x, Slider.y - Slider.h - Context->style->padding, Slider.w, Slider.h})) {
-        uint32_t LowerOrder = Audio[LowerAudio].LayoutOrder;
-        
-        Audio[LowerAudio].LayoutOrder = Audio[AudioID].LayoutOrder;
-        Audio[AudioID].LayoutOrder = LowerOrder;
-      }
-    }
-
-    if (UpperAudio > -1) {
-      if (mu_mouse_over(Context, (mu_Rect){Slider.x, Slider.y + Slider.h + Context->style->padding, Slider.w, Slider.h})) {
-        uint32_t UpperOrder = Audio[UpperAudio].LayoutOrder;
-        
-        Audio[UpperAudio].LayoutOrder = Audio[AudioID].LayoutOrder;
-        Audio[AudioID].LayoutOrder = UpperOrder;
-      }
-    }
-
-    RefreshPlaylist();
-  }
-  
-  mu_draw_control_frame(Context, ButtonID, Slider, MU_COLOR_BUTTON, MU_OPT_NOBORDER);
-  mu_draw_control_frame(Context, ButtonID, MainRect, AudioCurrentIndex != AudioID ? MU_COLOR_BUTTON : MU_COLOR_BASE, MU_OPT_NOBORDER);
-  mu_draw_control_text(Context, Name, MainRect, MU_COLOR_TEXT, 0);
-
-  return Result;
-}
-
-/* Based off of mu_button_ex implementation. */
-int SA_CategoryButton(mu_Context *Context, const char *Text, int Opt) {
-  int Result = 0;
-  mu_Rect Rect = mu_layout_next(Context);
-  
-  mu_Id ID = mu_get_id(Context, Text, strlen(Text));
-  mu_update_control(Context, ID, Rect, Opt);
-  
-  if (CurrentCategoryID == 0)
-    CurrentCategoryID = ID;
-
-  if (Context->mouse_pressed == MU_MOUSE_LEFT && Context->focus == ID) {
-    CurrentCategoryID = ID;
-    Result |= MU_RES_SUBMIT;
-  }
-  
-  mu_draw_control_frame(Context, ID, Rect, ID != CurrentCategoryID ? MU_COLOR_BUTTON : MU_COLOR_BASE, Opt);
-  mu_draw_control_text(Context, Text, Rect, MU_COLOR_TEXT, Opt);
-
-  return Result;
-}
-
-int SA_Slider(mu_Context *Context, mu_Real *Value, int Low, int High) {
-  int Result = 0, ScrollSpeed = Context->key_down & MU_KEY_SHIFT ? 1 : 2;
-  mu_Real Last = *Value, l_Value = Last;
-  mu_Rect l_Rect = mu_layout_next(Context);
-
-  mu_push_id(Context, &Value, sizeof(Value));
-  mu_Id ID = mu_get_id(Context, &Value, sizeof(Value)); 
-  
-  mu_update_control(Context, ID, l_Rect, MU_OPT_ALIGNCENTER);
-  
-  if (Context->focus == ID && (Context->mouse_down | Context->mouse_pressed) == MU_MOUSE_LEFT)
-    l_Value = Low + (Context->mouse_pos.x - l_Rect.x) * (High - Low) / l_Rect.w;
-
-  if (Context->scroll_delta.y != 0 && mu_mouse_over(Context, l_Rect))
-    *Value += Context->scroll_delta.y / (Context->scroll_delta.y / ScrollSpeed) * (Context->scroll_delta.y > 0 ? -1 : 1);
-  
-  if (Last != l_Value) {
-    *Value = l_Value = mu_clamp(l_Value, Low, High);
-    Result |= MU_RES_CHANGE;
-  }
-  
-  mu_draw_control_frame(Context, ID, l_Rect, MU_COLOR_BASE, MU_OPT_NOINTERACT);
-  mu_draw_control_frame(Context, ID, (mu_Rect){l_Rect.x, l_Rect.y, mu_clamp(l_Value / High * l_Rect.w, 0, l_Rect.w), l_Rect.h}, MU_COLOR_TEXT, MU_OPT_NOINTERACT);
-
-  mu_pop_id(Context);
-  return Result;
+void LowerString(char *Str) {
+  for(uint32_t i = 0; Str[i]; i++)
+    Str[i] = tolower(Str[i]);
 }
 
 void RefreshPlaylist() {
+  char *l_SearchBuffer = strdup(SearchBuffer);
+  LowerString(l_SearchBuffer);
+
   if (SA_TotalAudio > PlaylistBufferSizes) {
     AudioData *l_Audio = realloc(PlaylistAudios, sizeof(AudioData) * SA_TotalAudio);
 
@@ -217,8 +109,15 @@ void RefreshPlaylist() {
       continue;
     
     if (SearchBuffer[0] != 0) {
-      if (!strstr(Audio[i].Title, SearchBuffer))
+      char *LowerTitle = strdup(Audio[i].Title);
+      LowerString(LowerTitle);
+
+      if (!strstr(LowerTitle, l_SearchBuffer)) {
+        free(LowerTitle);
         continue;
+      }
+
+      free(LowerTitle);
     }
 
     PlaylistAudios[Audio[i].LayoutOrder] = Audio[i];
@@ -226,6 +125,7 @@ void RefreshPlaylist() {
   }
 
   PlaylistBufferSizes = SA_TotalAudio;
+  free(l_SearchBuffer);
 }
 
 void InitializeGUI() {
@@ -475,8 +375,7 @@ void MainWindow(mu_Context *Context) {
     
     mu_Rect PlusRect = mu_layout_next(Context);
     PlusRect.x = CATEGORY_WIDTH / 2 - 8;
-    PlusRect.w = 15;
-    PlusRect.h = 15;
+    PlusRect.w = PlusRect.h = 15;
     
     mu_layout_set_next(Context, PlusRect, 0);
     if (TotalCategoryButtons - 1 < SA_MAX_CATEGORIES) {
