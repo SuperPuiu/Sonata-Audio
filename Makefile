@@ -1,5 +1,5 @@
 SOURCES = $(wildcard src/*.c)
-CFLAGS = -Isrc/.. -Wall -Wextra -Wshadow -pedantic -std=c11 -lSDL3 -lSDL3_mixer -lm
+CFLAGS = -Isrc/.. -Wall -Wextra -Wshadow -lSDL3 -lSDL3_mixer -lm
 
 buildTest:
 	mkdir -p bin
