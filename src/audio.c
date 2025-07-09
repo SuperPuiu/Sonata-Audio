@@ -30,7 +30,6 @@ int AudioVolume = MIX_MAX_VOLUME, AudioCurrentIndex = -1;
 static Mix_Music *Music;
 
 double AudioDuration = 0, AudioPosition = 0;
-static double LoopStart, LoopEnd, LoopLength;
 
 char *AudioCurrentPath = NULL;
 
@@ -61,14 +60,14 @@ void AudioRemove(uint32_t Index) {
   }
 }
 
-int GetEmptyIndex() {
+int32_t GetEmptyIndex() {
   for (uint32_t i = 0; i < SA_TotalAudio; i++)
     if (Audio[i].Path[0] == 0)
       return i;
   return -1;
 }
 
-int GetNextIndex(uint32_t Index) {
+int32_t GetNextIndex(uint32_t Index) {
   uint32_t LayoutOrder = Audio[Index].LayoutOrder;
 
   for (uint32_t i = 0; i < SA_TotalAudio; i++) {
@@ -85,7 +84,7 @@ int GetNextIndex(uint32_t Index) {
   return 0; /* Fallback return */
 }
 
-int GetAudioIndex(char *Path) {
+int32_t GetAudioIndex(char *Path) {
   if (Path == NULL)
     return -1;
 
@@ -100,7 +99,7 @@ int GetAudioIndex(char *Path) {
   return -1;
 }
 
-int AddAudio(char *Path, char *Category) {
+int32_t AddAudio(char *Path, char *Category) {
   if (GetAudioIndex(Path) != -1) {
     SDL_Log("\"%s\" is already loaded.", Path);
     return -1;
@@ -108,27 +107,26 @@ int AddAudio(char *Path, char *Category) {
   
   Category = Category == NULL ? "All" : Category;
 
-  int Index = GetEmptyIndex();
+  int32_t Index = GetEmptyIndex();
   Mix_Music *l_Music;
-  char LocalTagTitle[256];
 
   const char *TagArtist = NULL;
   const char *TagAlbum = NULL;
   const char *TagCopyright = NULL;
 
   if (Index == -1) {
-    AudioData *l_Audio = malloc(sizeof(AudioData) * (SA_TotalAudio * 2));
-    
+    AudioData *l_Audio = realloc(Audio, sizeof(AudioData) * (SA_TotalAudio * 2));
     Index = SA_TotalAudio;
-
-    for (uint16_t i = 0; i < SA_TotalAudio; i++)
-      memcpy(&l_Audio[i], &Audio[i], sizeof(AudioData));
+    
+    if (!l_Audio) {
+      SDL_Log("Failed to reallocate Audio buffer during AddAudio call.\n");
+      exit(EXIT_FAILURE);
+    }
 
     for (uint16_t i = SA_TotalAudio; i < SA_TotalAudio * 2; i++)
       memset(&l_Audio[i], 0, sizeof(AudioData));
 
     SA_TotalAudio *= 2;
-    free(Audio);
     Audio = l_Audio;
   }
 
@@ -140,13 +138,11 @@ int AddAudio(char *Path, char *Category) {
   }
 
   if (Mix_GetMusicTitle(l_Music)[0] != 0) {
-    char *Local = (char*)Mix_GetMusicTitle(l_Music);
+    char *MusicTitle = (char*)Mix_GetMusicTitle(l_Music);
 
-    memset(LocalTagTitle, 0, sizeof(LocalTagTitle));
-    memcpy(LocalTagTitle, Local, strlen(Local));
+    memcpy(Audio[Index].Title, MusicTitle, strlen(MusicTitle));
   } else {
     SDL_Log("WARNING: LocalTagTitle is empty.");
-    memset(LocalTagTitle, 0, sizeof(LocalTagTitle)); 
 
     char *LocalPath = Path;
     char *LastPathPointer;
@@ -157,7 +153,7 @@ int AddAudio(char *Path, char *Category) {
       LocalPath += Length;
     }
     
-    memcpy(LocalTagTitle, LastPathPointer, strlen(LastPathPointer));
+    memcpy(Audio[Index].Title, LastPathPointer, strlen(LastPathPointer));
   }
   
   TagArtist = Mix_GetMusicArtistTag(l_Music);
@@ -168,7 +164,6 @@ int AddAudio(char *Path, char *Category) {
   if (TagCopyright[0] == 0) {TagCopyright = "N/A";}
   if (TagAlbum[0] == 0) {TagAlbum = "N/A";}
 
-  memcpy(Audio[Index].Title, LocalTagTitle, strlen(LocalTagTitle));
   memcpy(Audio[Index].Path, Path, strlen(Path));
   memcpy(Audio[Index].TagArtist, TagArtist, strlen(TagArtist));
   memcpy(Audio[Index].TagAlbum, TagAlbum, strlen(TagAlbum));
@@ -208,7 +203,7 @@ void UpdateAudioPosition() {
   }
 }
 
-double PlayAudio(char *Path) {
+int8_t PlayAudio(char *Path) {
   int Index = GetAudioIndex(Path);
 
   if (Index == -1)
@@ -229,15 +224,12 @@ double PlayAudio(char *Path) {
 
     AudioDuration = Mix_MusicDuration(Music);
     AudioPosition = 0;
-
-    LoopStart = Mix_GetMusicLoopStartTime(Music);
-    LoopEnd = Mix_GetMusicLoopEndTime(Music);
-    LoopLength = Mix_GetMusicLoopLengthTime(Music);
     
     Mix_PlayMusic(Music, 0);
     Mix_SetMusicPosition(0);
-    return LoopLength;
+
+    return 0;
   }
   
-  return 0;
+  return -1;
 }

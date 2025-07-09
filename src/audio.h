@@ -30,7 +30,7 @@ extern uint32_t SA_TotalAudio;
 void AudioRemove(uint32_t Index);
 void UpdateAudioPosition();
 void InitializeAudio();
-int AddAudio(char *Path, char *Category);
-double PlayAudio(char *Path);
+int32_t AddAudio(char *Path, char *Category);
+int8_t PlayAudio(char *Path);
 
 #endif
