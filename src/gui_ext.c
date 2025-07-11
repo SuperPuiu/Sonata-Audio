@@ -1,5 +1,6 @@
 #include "audio.h"
 #include "gui_ext.h"
+#include "gui.h"
 
 #include <string.h>
 
@@ -64,7 +65,7 @@ int SA_AudioButton(mu_Context *Context, const char *Name, int AudioID) {
     RefreshPlaylist();
   }
   
-  mu_draw_control_frame(Context, ButtonID, Slider, MU_COLOR_BUTTON, MU_OPT_NOBORDER);
+  mu_draw_control_frame(Context, ButtonID, Slider, SlidingAudio != AudioID ? MU_COLOR_BUTTON : MU_COLOR_BASE, MU_OPT_NOBORDER);
   mu_draw_control_frame(Context, ButtonID, MainRect, AudioCurrentIndex != AudioID ? MU_COLOR_BUTTON : MU_COLOR_BASE, MU_OPT_NOBORDER);
   mu_draw_control_text(Context, Name, MainRect, MU_COLOR_TEXT, 0);
 
