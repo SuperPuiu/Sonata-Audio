@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "discord.h"
 #include "audio.h"
 #include "render.h"
 #include "microui.h"
@@ -17,6 +18,7 @@ int main(int argc, char **argv) {
   r_init();
   InitializeAudio();
   InitializeGUI();
+  InitializeRPC();
 
   mu_Context *Context = malloc(sizeof(mu_Context));
   mu_init(Context);
@@ -112,6 +114,7 @@ int main(int argc, char **argv) {
 
   free(Context);
   SDL_Quit();
+  ShutdownRPC();
 
   return 0;
 }

@@ -11,6 +11,7 @@ const char *PathDelimiter = "/";
 const char *PathDelimiter = "\\";
 #endif
 
+#include "discord.h"
 #include "gui.h"
 #include "audio.h"
 
@@ -205,15 +206,18 @@ void UpdateAudioPosition() {
 
 int8_t PlayAudio(char *Path) {
   int Index = GetAudioIndex(Path);
+  
+  if (AudioCurrentIndex == Index)
+    return 0;
 
   if (Index == -1)
     Index = AddAudio(Path, NULL);
-  
+
   if (Music != NULL) {
     Mix_FreeMusic(Music);
     Music = NULL;
   }
-
+  
   Music = Mix_LoadMUS(Path);
   
   SDL_Log("Attempting to load \"%s\"", Path);
@@ -225,6 +229,8 @@ int8_t PlayAudio(char *Path) {
     AudioDuration = Mix_MusicDuration(Music);
     AudioPosition = 0;
     
+    UpdateActivityRPC(Audio[Index].Title, Audio[Index].TagArtist);
+
     Mix_PlayMusic(Music, 0);
     Mix_SetMusicPosition(0);
 
