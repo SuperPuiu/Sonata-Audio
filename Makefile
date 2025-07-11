@@ -12,6 +12,12 @@ linux:
 windows:
 	x86_64-w64-mingw32-gcc -D WINDOWS="" $(SOURCES) microui.c $(CFLAGS) -lcomdlg32 -lgdi32 -lole32 -o3 -o bin/SonataAudio.exe
 
+windowsRPC:
+	x86_64-w64-mingw32-gcc -D WINDOWS="" $(SOURCES) microui.c DiscordRPC/build/libdiscordrpc.a $(CFLAGS) -lcomdlg32 -lgdi32 -lole32 -o3 -o bin/SonataAudio.exe -IDiscordRPC/inc/
+
+linuxRPC:
+	gcc $(SOURCES) microui.c DiscordRPC/build/libdiscordrpc.a $(CFLAGS) -DNDEBUG -o3 -lX11 -o bin/SonataAudio -IDiscordRPC/inc/
+
 run:
 	./bin/SonataAudio
 
