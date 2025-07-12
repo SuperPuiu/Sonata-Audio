@@ -206,9 +206,6 @@ void UpdateAudioPosition() {
 
 int8_t PlayAudio(char *Path) {
   int Index = GetAudioIndex(Path);
-  
-  if (AudioCurrentIndex == Index)
-    return 0;
 
   if (Index == -1)
     Index = AddAudio(Path, NULL);
@@ -223,13 +220,14 @@ int8_t PlayAudio(char *Path) {
   SDL_Log("Attempting to load \"%s\"", Path);
 
   if (Music) {
+    if (AudioCurrentIndex != Index)
+      UpdateActivityRPC(Audio[Index].Title, Audio[Index].TagArtist);
+
     AudioCurrentIndex = Index;
     AudioCurrentPath = Path;
 
     AudioDuration = Mix_MusicDuration(Music);
     AudioPosition = 0;
-    
-    UpdateActivityRPC(Audio[Index].Title, Audio[Index].TagArtist);
 
     Mix_PlayMusic(Music, 0);
     Mix_SetMusicPosition(0);
