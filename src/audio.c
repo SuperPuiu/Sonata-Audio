@@ -26,7 +26,7 @@ AudioData *Audio;
 bool LoopLock = false; /* Used for LOOP_ALL functionality */
 
 uint32_t SA_TotalAudio = 2;
-int AudioVolume = MIX_MAX_VOLUME, AudioCurrentIndex = -1;
+int32_t AudioVolume = MIX_MAX_VOLUME, AudioCurrentIndex = -1;
 
 static Mix_Music *Music;
 
@@ -228,8 +228,9 @@ int8_t PlayAudio(char *Path) {
 
     AudioDuration = Mix_MusicDuration(Music);
     AudioPosition = 0;
-
-    Mix_PlayMusic(Music, 0);
+    
+    if (!PausedMusic)
+      Mix_PlayMusic(Music, 0);
     Mix_SetMusicPosition(0);
 
     return 0;

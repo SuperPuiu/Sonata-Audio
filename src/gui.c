@@ -33,8 +33,8 @@ int LoopStatus = LOOP_NONE;
 float l_AudioPosition;
 static float AudioFloat = MIX_MAX_VOLUME;
 
+bool PausedMusic = false; /* Paused using the button */
 static bool InfoOpen = false, PopupOpen = false;
-static bool PausedMusic = false; /* Paused using the button */
 
 static mu_Rect SA_Title, SA_Below;
 static mu_Rect SA_Playlist, SA_Popup;

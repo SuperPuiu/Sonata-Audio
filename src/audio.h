@@ -23,8 +23,9 @@ typedef struct {
 } AudioData;
 
 extern AudioData *Audio;
+extern bool PausedMusic;
 extern double AudioDuration, AudioPosition;
-extern int AudioVolume, AudioCurrentIndex;
+extern int32_t AudioVolume, AudioCurrentIndex;
 extern uint32_t SA_TotalAudio; 
 
 void AudioRemove(uint32_t Index);
