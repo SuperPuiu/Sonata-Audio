@@ -10,7 +10,7 @@
 #endif
 
 typedef struct {
-  char Title[256];
+  char Title[128];
   char Path[PATH_MAX];
   
   char TagArtist[128];
@@ -23,14 +23,15 @@ typedef struct {
 } AudioData;
 
 extern AudioData *Audio;
+extern bool PausedMusic;
 extern double AudioDuration, AudioPosition;
-extern int AudioVolume, AudioCurrentIndex;
+extern int32_t AudioVolume, AudioCurrentIndex;
 extern uint32_t SA_TotalAudio; 
 
 void AudioRemove(uint32_t Index);
 void UpdateAudioPosition();
 void InitializeAudio();
-int AddAudio(char *Path, char *Category);
-double PlayAudio(char *Path);
+int32_t AddAudio(char *Path, char *Category);
+int8_t PlayAudio(char *Path);
 
 #endif

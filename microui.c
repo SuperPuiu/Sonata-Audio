@@ -457,6 +457,11 @@ static mu_Command* push_jump(mu_Context *ctx, mu_Command *dst) {
   return cmd;
 }
 
+static mu_Command *push_input(mu_Context *ctx, uint8_t status) {
+  mu_Command *cmd = mu_push_command(ctx, MU_COMMAND_INPUT, sizeof(MU_COMMAND_INPUT));
+  cmd->input.status = status;
+  return cmd;
+}
 
 void mu_set_clip(mu_Context *ctx, mu_Rect rect) {
   mu_Command *cmd;
@@ -778,6 +783,8 @@ int mu_textbox_raw(mu_Context *ctx, char *buf, int bufsz, mu_Id id, mu_Rect r,
   mu_update_control(ctx, id, r, opt | MU_OPT_HOLDFOCUS);
 
   if (ctx->focus == id) {
+    push_input(ctx, 1);
+
     /* handle text input */
     int len = strlen(buf);
     int n = mu_min(bufsz - len - 1, (int) strlen(ctx->input_text));
@@ -797,6 +804,7 @@ int mu_textbox_raw(mu_Context *ctx, char *buf, int bufsz, mu_Id id, mu_Rect r,
     /* handle return */
     if (ctx->key_pressed & MU_KEY_RETURN) {
       mu_set_focus(ctx, 0);
+      push_input(ctx, 0);
       res |= MU_RES_SUBMIT;
     }
   }

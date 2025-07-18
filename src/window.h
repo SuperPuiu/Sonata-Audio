@@ -1,3 +1,24 @@
+/* MIT License
+ * Copyright (c) 2025 SuperPuiu
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE. */
+
 #ifndef __SAWINDOW__
 #define __SAWINDOW__
 
@@ -8,6 +29,7 @@
 #include "render.h"
 
 uint32_t Buffer[WINDOW_WIDTH * WINDOW_HEIGHT];
+SDL_Window *CreatedWindow;
 
 #ifndef __WINDOW_FUNC__
 #define __WINDOW_FUNC__
@@ -38,14 +60,14 @@ XImage *l_XImage;
 
 void OpenWindow(void) {
   /* Let SDL carry the creation of the window for us */
-  SDL_Window *MainWindow = SDL_CreateWindow("Sonata Audio", WINDOW_WIDTH, WINDOW_HEIGHT, 0);
+  CreatedWindow = SDL_CreateWindow("Sonata Audio", WINDOW_WIDTH, WINDOW_HEIGHT, 0);
 
-  if (!MainWindow)
+  if (!CreatedWindow)
     SDL_Log("OpenWindow: %s", SDL_GetError());
 
   /* Now populate our variables using the newly created window */
-  l_Display = (Display *)SDL_GetPointerProperty(SDL_GetWindowProperties(MainWindow), SDL_PROP_WINDOW_X11_DISPLAY_POINTER, NULL);
-  l_Window = (Window)SDL_GetNumberProperty(SDL_GetWindowProperties(MainWindow), SDL_PROP_WINDOW_X11_WINDOW_NUMBER, 0);
+  l_Display = (Display *)SDL_GetPointerProperty(SDL_GetWindowProperties(CreatedWindow), SDL_PROP_WINDOW_X11_DISPLAY_POINTER, NULL);
+  l_Window = (Window)SDL_GetNumberProperty(SDL_GetWindowProperties(CreatedWindow), SDL_PROP_WINDOW_X11_WINDOW_NUMBER, 0);
   l_GC = XCreateGC(l_Display, l_Window, 0, 0);
   
   XWindowAttributes Attributes = {0};
@@ -108,8 +130,8 @@ LRESULT CALLBACK CustomRedrawWindow(HWND l_HWND, UINT Message, WPARAM l_WPARAM, 
 }
 
 void OpenWindow(void) {
-  SDL_Window *Window = SDL_CreateWindow("Sonata Audio", WINDOW_WIDTH, WINDOW_HEIGHT, 0);
-  ID = (HWND)SDL_GetPointerProperty(SDL_GetWindowProperties(Window), SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
+  CreatedWindow = SDL_CreateWindow("Sonata Audio", WINDOW_WIDTH, WINDOW_HEIGHT, 0);
+  ID = (HWND)SDL_GetPointerProperty(SDL_GetWindowProperties(CreatedWindow), SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
 
   SDL_WNDPROC = (WNDPROC)SetWindowLongPtr(GetActiveWindow(), GWLP_WNDPROC, (LONG_PTR)&CustomRedrawWindow);
 
