@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 
 #ifndef WINDOWS
@@ -15,42 +16,40 @@ const char *PathDelimiter = "\\";
 #include "gui.h"
 #include "audio.h"
 
-static SDL_AudioSpec Specifications = {
-  .freq = MIX_DEFAULT_FREQUENCY,
-  .format = MIX_DEFAULT_FORMAT,
-  .channels = MIX_DEFAULT_CHANNELS
-};
-
 AudioData *Audio;
 
 bool LoopLock = false; /* Used for LOOP_ALL functionality */
 
-uint32_t SA_TotalAudio = 2;
-int32_t AudioVolume = MIX_MAX_VOLUME, AudioCurrentIndex = -1;
+uint32_t SA_TotalAudio = 2, SA_ExternalAudio = 0;
+int32_t AudioVolume = 100, AudioCurrentIndex = -1;
 
-static Mix_Music *Music;
+MIX_Audio *Music;
+MIX_Track *DefaultTrack;
+static MIX_Mixer *DefaultMixer;
 
 double AudioDuration = 0, AudioPosition = 0;
 
 char *AudioCurrentPath = NULL;
 
 void InitializeAudio() {
-  if (!Mix_OpenAudio(0, &Specifications)) {
+  if (!(DefaultMixer = MIX_CreateMixerDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, NULL))) {
     SDL_Log("Couldn't open audio %s\n", SDL_GetError());
     exit(EXIT_FAILURE);
-  } else {
-    Mix_QuerySpec(&Specifications.freq, &Specifications.format, &Specifications.channels);
   }
-  
+
   Audio = malloc(sizeof(AudioData) * SA_TotalAudio);
-  
-  Mix_VolumeMusic(AudioVolume);
+  DefaultTrack = MIX_CreateTrack(DefaultMixer);
 }
 
 void AudioRemove(uint32_t Index) {
   if (Index == SA_TotalAudio || Audio[Index].Path[0] == 0)
     return;
-  
+
+  if (Audio[Index].Stream) {
+    free(Audio[Index].StreamMemory);
+    SDL_CloseIO(Audio[Index].Stream);
+  }
+
   memset(&Audio[Index], 0, sizeof(AudioData));
 
   for (uint32_t i = Index + 1; i < SA_TotalAudio; i++) {
@@ -81,11 +80,11 @@ int32_t GetNextIndex(uint32_t Index) {
     if (strcmp(Audio[Index].AssignedList, Audio[i].AssignedList) == 0)
       return i;
   }
-  
+
   return 0; /* Fallback return */
 }
 
-int32_t GetAudioIndex(char *Path) {
+int32_t GetAudioIndexByPath(char *Path) {
   if (Path == NULL)
     return -1;
 
@@ -100,16 +99,16 @@ int32_t GetAudioIndex(char *Path) {
   return -1;
 }
 
-int32_t AddAudio(char *Path, char *Category) {
-  if (GetAudioIndex(Path) != -1) {
+int32_t AddAudio(char *Path, char *Category, SDL_IOStream *Stream) {
+  if (GetAudioIndexByPath(Path) != -1) {
     SDL_Log("\"%s\" is already loaded.", Path);
     return -1;
   }
-  
+
   Category = Category == NULL ? "All" : Category;
 
   int32_t Index = GetEmptyIndex();
-  Mix_Music *l_Music;
+  MIX_Audio *l_Music;
 
   const char *TagArtist = NULL;
   const char *TagAlbum = NULL;
@@ -118,7 +117,7 @@ int32_t AddAudio(char *Path, char *Category) {
   if (Index == -1) {
     AudioData *l_Audio = realloc(Audio, sizeof(AudioData) * (SA_TotalAudio * 2));
     Index = SA_TotalAudio;
-    
+
     if (!l_Audio) {
       SDL_Log("Failed to reallocate Audio buffer during AddAudio call.\n");
       exit(EXIT_FAILURE);
@@ -131,72 +130,89 @@ int32_t AddAudio(char *Path, char *Category) {
     Audio = l_Audio;
   }
 
-  l_Music = Mix_LoadMUS(Path);
+  if (!Stream)
+    l_Music = MIX_LoadAudio(DefaultMixer, Path, 0);
+  else
+    l_Music = MIX_LoadAudio_IO(DefaultMixer, Stream, 0, 0);
 
   if (!l_Music) {
     SDL_Log("Failed to load \"%s\": %s", Path, SDL_GetError());
     return -1;
   }
 
-  if (Mix_GetMusicTitle(l_Music)[0] != 0) {
-    char *MusicTitle = (char*)Mix_GetMusicTitle(l_Music);
+  SDL_PropertiesID Properties = MIX_GetAudioProperties(l_Music);
 
+  if (SDL_GetStringProperty(Properties, MIX_PROP_METADATA_TITLE_STRING, NULL) != NULL) {
+    const char *MusicTitle = SDL_GetStringProperty(Properties, MIX_PROP_METADATA_TITLE_STRING, NULL);
     memcpy(Audio[Index].Title, MusicTitle, strlen(MusicTitle));
   } else {
     SDL_Log("WARNING: LocalTagTitle is empty.");
 
-    char *LocalPath = Path;
-    char *LastPathPointer;
-    
-    while (*(LocalPath += strspn(LocalPath, PathDelimiter)) != '\0') {
-      size_t Length = strcspn(LocalPath, PathDelimiter);
-      LastPathPointer = LocalPath;
-      LocalPath += Length;
-    }
-    
-    memcpy(Audio[Index].Title, LastPathPointer, strlen(LastPathPointer));
-  }
-  
-  TagArtist = Mix_GetMusicArtistTag(l_Music);
-  TagCopyright = Mix_GetMusicCopyrightTag(l_Music);
-  TagAlbum = Mix_GetMusicAlbumTag(l_Music);
-  
-  if (TagArtist[0] == 0) {TagArtist = "N/A";}
-  if (TagCopyright[0] == 0) {TagCopyright = "N/A";}
-  if (TagAlbum[0] == 0) {TagAlbum = "N/A";}
+    if (Stream) {
+      const char *l_TitleBuffer = "External Audio";
+      memcpy(Audio[Index].Title, l_TitleBuffer, strlen(l_TitleBuffer));
+    } else {
+      char *LocalPath = Path;
+      char *LastPathPointer = "";
 
-  memcpy(Audio[Index].Path, Path, strlen(Path));
+      while (*(LocalPath += strspn(LocalPath, PathDelimiter)) != '\0') {
+        size_t Length = strcspn(LocalPath, PathDelimiter);
+        LastPathPointer = LocalPath;
+        LocalPath += Length;
+      }
+
+      memcpy(Audio[Index].Title, LastPathPointer, strlen(LastPathPointer));
+    }
+  }
+
+  TagArtist = SDL_GetStringProperty(Properties, MIX_PROP_METADATA_ARTIST_STRING, NULL);
+  TagCopyright = SDL_GetStringProperty(Properties, MIX_PROP_METADATA_COPYRIGHT_STRING, NULL);
+  TagAlbum = SDL_GetStringProperty(Properties, MIX_PROP_METADATA_ALBUM_STRING, NULL);
+
+  if (!TagArtist) {TagArtist = "N/A";}
+  if (!TagCopyright) {TagCopyright = "N/A";}
+  if (!TagAlbum) {TagAlbum = "N/A";}
+
+  if (!Stream)
+    memcpy(Audio[Index].Path, Path, strlen(Path));
+  else
+    sprintf(Audio[Index].Path, "External-%i", SA_ExternalAudio);
+
   memcpy(Audio[Index].TagArtist, TagArtist, strlen(TagArtist));
   memcpy(Audio[Index].TagAlbum, TagAlbum, strlen(TagAlbum));
   memcpy(Audio[Index].TagCopyright, TagCopyright, strlen(TagCopyright));
   memcpy(Audio[Index].AssignedList, Category, strlen(Category));
-  
+
   Audio[Index].LayoutOrder = Index;
-  
-  RefreshPlaylist();
-  Mix_FreeMusic(l_Music);
+  Audio[Index].Stream = Stream ? Stream : NULL;
+
+  RefreshUI();
+  MIX_DestroyAudio(l_Music);
   return Index;
 }
 
 void UpdateAudioPosition() {
-  if (Mix_PlayingMusic()) {
+  if (MIX_TrackPlaying(DefaultTrack)) {
     LoopLock = false;
-    AudioPosition = Mix_GetMusicPosition(Music);
+    AudioPosition = MIX_TrackFramesToMS(DefaultTrack, MIX_GetTrackPlaybackPosition(DefaultTrack)) / 1000;
   } else {
     if (LoopStatus == LOOP_SONG) {
-      if (GetAudioIndex(AudioCurrentPath) != -1)
-        PlayAudio(AudioCurrentPath);
+      if (GetAudioIndexByPath(AudioCurrentPath) != -1) {
+        MIX_PlayTrack(DefaultTrack, 0);
+      }
     } else if (LoopStatus == LOOP_ALL && LoopLock == false) {
       LoopLock = true;
 
-      if (GetAudioIndex(AudioCurrentPath) != -1)
+      if (GetAudioIndexByPath(AudioCurrentPath) != -1)
         PlayAudio(Audio[GetNextIndex(AudioCurrentIndex)].Path);
     } else if (LoopStatus == LOOP_ALL && LoopLock == true) {
       /* Probably not the best way to handle it */
-      if (GetAudioIndex(AudioCurrentPath) != -1)
+      if (GetAudioIndexByPath(AudioCurrentPath) != -1) {
+        MIX_PauseTrack(DefaultTrack);
         PlayAudio(Audio[AudioCurrentIndex].Path);
+      }
     } else if (LoopStatus == LOOP_NONE) {
-      Mix_FreeMusic(Music);
+      MIX_DestroyAudio(Music);
 
       Music = NULL;
       AudioCurrentIndex = -1;
@@ -205,36 +221,46 @@ void UpdateAudioPosition() {
 }
 
 int8_t PlayAudio(char *Path) {
-  int Index = GetAudioIndex(Path);
+  int Index = GetAudioIndexByPath(Path);
 
   if (Index == -1)
-    Index = AddAudio(Path, NULL);
+    Index = AddAudio(Path, NULL, NULL);
 
   if (Music != NULL) {
-    Mix_FreeMusic(Music);
+    MIX_DestroyAudio(Music);
     Music = NULL;
   }
-  
-  Music = Mix_LoadMUS(Path);
-  
+
   SDL_Log("Attempting to load \"%s\"", Path);
+  if (Audio[Index].Stream) {
+    SDL_SeekIO(Audio[Index].Stream, 0, SDL_IO_SEEK_SET);
+    Music = MIX_LoadAudio_IO(DefaultMixer, Audio[Index].Stream, 0, 0);
+  } else {
+    Music = MIX_LoadAudio(DefaultMixer, Path, 0);
+  }
 
   if (Music) {
     if (AudioCurrentIndex != Index)
       UpdateActivityRPC(Audio[Index].Title, Audio[Index].TagArtist);
 
+    MIX_SetTrackAudio(DefaultTrack, Music);
+
     AudioCurrentIndex = Index;
     AudioCurrentPath = Path;
 
-    AudioDuration = Mix_MusicDuration(Music);
+    AudioDuration = MIX_AudioFramesToMS(Music, MIX_GetAudioDuration(Music)) / 1000;
     AudioPosition = 0;
-    
-    if (!PausedMusic)
-      Mix_PlayMusic(Music, 0);
-    Mix_SetMusicPosition(0);
+
+    MIX_SetTrackPlaybackPosition(DefaultTrack, 0);
+
+    if (PausedMusic)
+      MIX_ResumeTrack(DefaultTrack);
+    MIX_PlayTrack(DefaultTrack, 0);
 
     return 0;
+  } else {
+    SDL_Log("Error loading music: %s", SDL_GetError());
   }
-  
+
   return -1;
 }

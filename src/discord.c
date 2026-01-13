@@ -42,9 +42,11 @@ void ShutdownRPC() {
 
 #else
 
+#include "microui.h"
+
 /* If we opted for no discord rpc, we don't need any functionality. */
 void InitializeRPC() {}
-void UpdateActivityRPC() {}
+void UpdateActivityRPC(char *Title, char *Artist) {unused(Title); unused(Artist);}
 void ShutdownRPC() {}
 
 #endif

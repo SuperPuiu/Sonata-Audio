@@ -62,7 +62,7 @@ int SA_AudioButton(mu_Context *Context, const char *Name, int AudioID) {
       }
     }
 
-    RefreshPlaylist();
+    RefreshUI();
   }
   
   mu_draw_control_frame(Context, ButtonID, Slider, SlidingAudio != AudioID ? MU_COLOR_BUTTON : MU_COLOR_BASE, MU_OPT_NOBORDER);
