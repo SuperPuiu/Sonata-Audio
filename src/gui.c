@@ -4,7 +4,6 @@
 #include "pfd.h"
 #include "audio.h"
 #include "gui_ext.h"
-#include "curl_wrappers.h"
 
 #ifndef WINDOWS
 #include <dirent.h>
@@ -59,38 +58,17 @@ int TextWidth(mu_Font font, const char *text, int len) {
   unused(font);
 
   if (len == -1) { len = strlen(text); }
-  return r_get_text_width(text, len);
+  return RenderGetTextWidth(text, len);
 }
 
 int TextHeight(mu_Font font) {
   unused(font);
 
-  return r_get_text_height();
+  return RenderGetTextHeight();
 }
 
 void FuncRemoveAudio() {
   AudioRemove(SelectedAudio);
-}
-
-void FuncAddExternalAudio() {
-  SetupHandle();
-
-  SDL_Log("Downloading: %s\n", PopupTextBuffer);
-
-  MemoryStruct ExternalAudio = {.Size = 0, .Memory = malloc(1)};
-  CURLcode Response = CurlGet(&ExternalAudio, PopupTextBuffer);
-
-  if (Response != CURLE_OK) {
-    SDL_Log("Failed to download external audio. Curl error: %s", curl_easy_strerror(Response));
-    goto done;
-  }
-
-  SDL_IOStream *Stream = SDL_IOFromMem(ExternalAudio.Memory, ExternalAudio.Size);
-  int32_t NewIndex = AddAudio(NULL, CurrentCategory, Stream);
-  Audio[NewIndex].StreamMemory = ExternalAudio.Memory;
-
-done:
-  DestroyHandle();
 }
 
 void LowerString(char *Str) {
@@ -356,14 +334,6 @@ void MainWindow(mu_Context *Context) {
         AddAudio((char *)Path, CurrentCategory, NULL);
       else
         SDL_Log("Path is NULL.");
-    }
-
-    mu_layout_set_next(Context, (mu_Rect){l_Rect.x + l_Width[0] / 2 + 5, l_Rect.y, 70, 20}, 0);
-    if (mu_button(Context, "Add link")) {
-      PopupAction = FuncAddExternalAudio;
-      PopupOpen = true;
-      PopupTextInputActive = true;
-      PopupContainer->open = 1;
     }
 
     if (mu_begin_popup(Context, "Menu")) {

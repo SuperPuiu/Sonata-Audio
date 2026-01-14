@@ -88,6 +88,10 @@ void OpenWindow(void) {
   }
 }
 
+void CloseWindow() {
+  XUnmapWindow(l_Display, l_Window);
+}
+
 void RefreshWindow() {
   XPutImage(l_Display, l_Window, l_GC, l_XImage, 0, 0, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
 }
@@ -149,6 +153,10 @@ void OpenWindow(void) {
 
   UpdateWindow(ID);
   ShowWindow(ID, SW_NORMAL);
+}
+
+void CloseWindow() {
+
 }
 
 void RefreshWindow() {

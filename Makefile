@@ -1,19 +1,16 @@
 SOURCES = $(wildcard src/*.c)
-CFLAGS = -Isrc/.. -Wall -Wextra -Wshadow -lSDL3 -lSDL3_mixer -lm
+CFLAGS = -Isrc/.. -Isrc/include/ -Wall -flto -Wextra -Wshadow -ffunction-sections -Wl,--gc-sections -lSDL3 -lSDL3_mixer
 
 buildTest:
 	mkdir -p bin
-	gcc $(SOURCES) microui.c $(CFLAGS) -fsanitize=leak -g -ggdb3 -lX11 -o bin/SonataAudio
+	gcc $(SOURCES) microui.c $(CFLAGS) -g -fsanitize=address -ggdb3 -lX11 -o bin/SonataAudio
 
 linux:
 	mkdir -p bin
-	gcc $(SOURCES) microui.c $(CFLAGS) -DNDEBUG -o3 -lX11 -o bin/SonataAudio
+	gcc $(SOURCES) microui.c $(CFLAGS) -DNDEBUG -Os -lX11 -o bin/SonataAudio
 
 windows:
 	x86_64-w64-mingw32-gcc -D WINDOWS="" $(SOURCES) microui.c $(CFLAGS) -lcomdlg32 -lgdi32 -lole32 -o3 -o bin/SonataAudio.exe
-
-# windowsRPC:
-	# x86_64-w64-mingw32-gcc -D WINDOWS="" $(SOURCES) microui.c DiscordRPC/build/libdiscordrpc.a $(CFLAGS) -lcomdlg32 -lgdi32 -lole32 -o3 -o bin/SonataAudio.exe -IDiscordRPC/inc/
 
 linuxRPC:
 	gcc $(SOURCES) microui.c DiscordRPC/build/libdiscordrpc.a $(CFLAGS) -DNDEBUG -o3 -lX11 -o bin/SonataAudio -IDiscordRPC/inc/

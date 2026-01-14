@@ -72,7 +72,11 @@ static inline mu_Color BlendPixel(mu_Color Destination, mu_Color Source) {
   return Destination;
 }
 
-void r_init(void) {
+void RenderQuit() {
+  CloseWindow();
+}
+
+void InitializeRender(void) {
   OpenWindow();
   Background = ColorToNumber(mu_color(33, 33, 33, 255));
   ProgramWindow = CreatedWindow;
@@ -87,7 +91,7 @@ void FlushBuffers(void) {
     uint16_t X = mu_max(Source->x, Clip.x);
     uint16_t Width = mu_min(Source->x + Source->w, Clip.x + Clip.w);
     uint16_t Height = mu_min(Source->y + Source->h, Clip.y + Clip.h);
-    
+
     uint32_t WindowArea = WINDOW_WIDTH * WINDOW_HEIGHT;
 
     for (uint16_t CurrentY = Y; CurrentY < Height; CurrentY++) {
@@ -126,7 +130,7 @@ void PushRectangle(mu_Rect Source, mu_Rect Texture, mu_Color Color) {
   BufferIndex += 1;
 }
 
-void r_set_clip_rect(mu_Rect Rect) {
+void RenderSetClipRect(mu_Rect Rect) {
   FlushBuffers();
 
   uint32_t Y = mu_max(0, Rect.y);
@@ -137,22 +141,22 @@ void r_set_clip_rect(mu_Rect Rect) {
   Clip = (mu_Rect){X, Y, Width, Height};
 }
 
-void r_draw_rect(mu_Rect Rect, mu_Color Color) {
+void RenderDrawRect(mu_Rect Rect, mu_Color Color) {
   PushRectangle(Rect, atlas[ATLAS_WHITE], Color);
 }
 
-void r_draw_text(const char *Text, mu_Vec2 Position, mu_Color Color) {
+void RenderDrawText(const char *Text, mu_Vec2 Position, mu_Color Color) {
   mu_Rect Destination = {Position.x, Position.y, 0, 0};
 
   for (const char *Pointer = Text; *Pointer; Pointer++) {
-    if ((*Pointer & 0xc0) == 0x80) 
+    if ((*Pointer & 0xc0) == 0x80)
       continue;
 
     int32_t Character = mu_min((unsigned char) *Pointer, 127);
     mu_Rect Source = atlas[ATLAS_FONT + Character];
     Destination.w = Source.w;
     Destination.h = Source.h;
-    
+
     if (Destination.x <= WINDOW_WIDTH && Destination.x > 0 && Destination.y <= WINDOW_HEIGHT && Destination.y > 0)
       PushRectangle(Destination, Source, Color);
 
@@ -160,7 +164,7 @@ void r_draw_text(const char *Text, mu_Vec2 Position, mu_Color Color) {
   }
 }
 
-void r_draw_icon(int IconID, mu_Rect Rect, mu_Color Color) {
+void RenderDrawIcon(int IconID, mu_Rect Rect, mu_Color Color) {
   mu_Rect Source = atlas[IconID];
 
   uint32_t X = Rect.x + (Rect.w - Source.w) / 2;
@@ -169,9 +173,9 @@ void r_draw_icon(int IconID, mu_Rect Rect, mu_Color Color) {
   PushRectangle((mu_Rect){X, Y, Source.w, Source.h}, Source, Color);
 }
 
-int r_get_text_width(const char *Text, int Length) {
+int RenderGetTextWidth(const char *Text, int Length) {
   int32_t Width = 0;
-  
+
   for (const char *Pointer = Text; *Pointer && Length--; Pointer++) {
     if ((*Pointer & 0xc0) == 0x80)
       continue;
@@ -179,20 +183,20 @@ int r_get_text_width(const char *Text, int Length) {
     int Character = mu_min((unsigned char)*Pointer, 127);
     Width += atlas[ATLAS_FONT + Character].w;
   }
-  
+
   return Width;
 }
 
-int r_get_text_height(void) {
+int RenderGetTextHeight(void) {
   return 18;
 }
 
-void r_clear(void) {
+void RenderClear(void) {
   FlushBuffers();
   ClearWindow(Background);
 }
 
-void r_present(void) {
+void RenderPresent(void) {
   FlushBuffers();
   RefreshWindow();
 }

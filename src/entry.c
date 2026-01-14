@@ -15,14 +15,17 @@
 bool Running = true;
 
 int AudioThread(void *NULLABLE) {
-  while (Running) {
-    SDL_Event Event = {.type = REFRESH_EVENT};
+  do {
+    if (!MIX_TrackPlaying(DefaultTrack)) {
+      SDL_Delay(200);
+      continue;
+    }
 
-    UpdateAudioPosition();
+    SDL_Event Event = {.type = REFRESH_EVENT};
 
     SDL_PushEvent(&Event);
     SDL_Delay(200);
-  }
+  } while (Running);
 
   unused(NULLABLE);
   return 0;
@@ -39,7 +42,7 @@ int main(int argc, char **argv) {
   }
 
   MIX_Init();
-  r_init();
+  InitializeRender();
   InitializeAudio();
   InitializeGUI();
   InitializeRPC();
@@ -60,7 +63,7 @@ int main(int argc, char **argv) {
 
   AudioThreadID = SDL_CreateThread(AudioThread, "AudioThread", NULL);
 
-  while (Running) {
+  do {
     SDL_Event Event;
     SDL_WaitEvent(&Event);
 
@@ -110,17 +113,18 @@ int main(int argc, char **argv) {
 
     /* process frame */
     ProcessContextFrame(Context);
+    UpdateAudioPosition();
 
     /* render */
-    r_clear();
+    RenderClear();
 
     mu_Command *cmd = NULL;
     while (mu_next_command(Context, &cmd)) {
       switch (cmd->type) {
-        case MU_COMMAND_TEXT: r_draw_text(cmd->text.str, cmd->text.pos, cmd->text.color); break;
-        case MU_COMMAND_RECT: r_draw_rect(cmd->rect.rect, cmd->rect.color); break;
-        case MU_COMMAND_ICON: r_draw_icon(cmd->icon.id, cmd->icon.rect, cmd->icon.color); break;
-        case MU_COMMAND_CLIP: r_set_clip_rect(cmd->clip.rect); break;
+        case MU_COMMAND_TEXT: RenderDrawText(cmd->text.str, cmd->text.pos, cmd->text.color); break;
+        case MU_COMMAND_RECT: RenderDrawRect(cmd->rect.rect, cmd->rect.color); break;
+        case MU_COMMAND_ICON: RenderDrawIcon(cmd->icon.id, cmd->icon.rect, cmd->icon.color); break;
+        case MU_COMMAND_CLIP: RenderSetClipRect(cmd->clip.rect); break;
         case MU_COMMAND_INPUT:
           if (cmd->input.status)
             SDL_StartTextInput(ProgramWindow);
@@ -130,10 +134,12 @@ int main(int argc, char **argv) {
       }
     }
 
-    r_present();
+    RenderPresent();
 
   exit:
-  }
+  } while (Running);
+
+  RenderQuit();
 
   SDL_WaitThread(AudioThreadID, NULL);
 

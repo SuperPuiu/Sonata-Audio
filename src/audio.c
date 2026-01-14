@@ -195,7 +195,7 @@ void UpdateAudioPosition() {
   if (MIX_TrackPlaying(DefaultTrack)) {
     LoopLock = false;
     AudioPosition = MIX_TrackFramesToMS(DefaultTrack, MIX_GetTrackPlaybackPosition(DefaultTrack)) / 1000;
-  } else {
+  } else if (!MIX_TrackPaused(DefaultTrack)) {
     if (LoopStatus == LOOP_SONG) {
       if (GetAudioIndexByPath(AudioCurrentPath) != -1) {
         MIX_PlayTrack(DefaultTrack, 0);
@@ -213,6 +213,7 @@ void UpdateAudioPosition() {
       }
     } else if (LoopStatus == LOOP_NONE) {
       MIX_DestroyAudio(Music);
+      MIX_SetTrackAudio(DefaultTrack, NULL);
 
       Music = NULL;
       AudioCurrentIndex = -1;
@@ -228,6 +229,7 @@ int8_t PlayAudio(char *Path) {
 
   if (Music != NULL) {
     MIX_DestroyAudio(Music);
+    MIX_SetTrackAudio(DefaultTrack, NULL);
     Music = NULL;
   }
 
