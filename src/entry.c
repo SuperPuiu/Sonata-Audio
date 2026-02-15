@@ -16,7 +16,7 @@ bool Running = true;
 
 int AudioThread(void *NULLABLE) {
   do {
-    if (!MIX_TrackPlaying(DefaultTrack)) {
+    if (!MIX_TrackPlaying(DefaultTrack) && MIX_TrackPaused(DefaultTrack)) {
       SDL_Delay(200);
       continue;
     }
