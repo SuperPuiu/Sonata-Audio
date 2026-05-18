@@ -35,6 +35,8 @@ SDL_Window *CreatedWindow;
 #ifndef __WINDOW_FUNC__
 #define __WINDOW_FUNC__
 
+#define SA_ClearWindow(BackgroundColor) (memset(Buffer, BackgroundColor, WINDOW_WIDTH * WINDOW_HEIGHT * sizeof(*Buffer)))
+
 void SA_PutPixel(int X, int Y, uint32_t PixelData) {
   assert(Y * WINDOW_WIDTH + X <= WINDOW_WIDTH * WINDOW_HEIGHT);
   Buffer[Y * WINDOW_WIDTH + X] = PixelData;
@@ -164,10 +166,6 @@ void RefreshWindow() {
 }
 
 #endif
-
-void ClearWindow(uint32_t BackgroundColor) {
-  memset(Buffer, BackgroundColor, WINDOW_WIDTH * WINDOW_HEIGHT * sizeof(*Buffer));
-}
 
 #endif /* __WINDOW_FUNC__ */
 #endif /* __SAWINDOW__ */

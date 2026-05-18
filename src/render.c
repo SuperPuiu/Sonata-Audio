@@ -1,23 +1,23 @@
 /* MIT License
- * Copyright (c) 2025 SuperPuiu
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE. */
+	* Copyright (c) 2025 SuperPuiu
+	*
+	* Permission is hereby granted, free of charge, to any person obtaining a copy
+	* of this software and associated documentation files (the "Software"), to deal
+	* in the Software without restriction, including without limitation the rights
+	* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	* copies of the Software, and to permit persons to whom the Software is
+	* furnished to do so, subject to the following conditions:
+	*
+	* The above copyright notice and this permission notice shall be included in all
+	* copies or substantial portions of the Software.
+	*
+	* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+	* SOFTWARE. */
 
 #include <SDL3/SDL.h>
 #include <assert.h>
@@ -43,78 +43,78 @@ static uint32_t BufferIndex = 0;
 SDL_Window *ProgramWindow;
 
 static inline uint32_t ColorToNumber(mu_Color Color) {
-  return ((uint32_t)Color.a << 24) | ((uint32_t)Color.r << 16) | ((uint32_t)Color.g << 8) | Color.b;
+		return ((uint32_t)Color.a << 24) | ((uint32_t)Color.r << 16) | ((uint32_t)Color.g << 8) | Color.b;
 }
 
 static inline mu_Color NumberToColor(uint32_t Color) {
-  return mu_color((Color >> 16) & 0xff, (Color >> 8) & 0xff, Color & 0xff, (Color >> 24) & 0xff);
+		return mu_color((Color >> 16) & 0xff, (Color >> 8) & 0xff, Color & 0xff, (Color >> 24) & 0xff);
 }
 
 static inline bool InRectangle(mu_Rect Rect, int X, int Y) {
-  return (X >= Rect.x && X < Rect.x + Rect.w) && (Y >= Rect.y && Y < Rect.y + Rect.h);
+		return (X >= Rect.x && X < Rect.x + Rect.w) && (Y >= Rect.y && Y < Rect.y + Rect.h);
 }
 
 static inline uint8_t GetAtlasColor(mu_Rect *Texture, int X, int Y) {
-  if (X >= Texture->w || Y >= Texture->h || Y >= Y * ATLAS_WIDTH + X)
-    return 0x00;
+		if (X >= Texture->w || Y >= Texture->h || Y >= Y * ATLAS_WIDTH + X)
+				return 0x00;
 
-  X += Texture->x;
-  Y += Texture->y;
+		X += Texture->x;
+		Y += Texture->y;
 
-  return atlas_texture[Y * ATLAS_WIDTH + X];
+		return atlas_texture[Y * ATLAS_WIDTH + X];
 }
 
 static inline mu_Color BlendPixel(mu_Color Destination, mu_Color Source) {
-  uint8_t ia = 0xff - Source.a;
-  Destination.r = ((Source.r * Source.a) + (Destination.r * ia)) >> 8;
-  Destination.g = ((Source.g * Source.a) + (Destination.g * ia)) >> 8;
-  Destination.b = ((Source.b * Source.a) + (Destination.b * ia)) >> 8;
-  return Destination;
+		uint8_t ia = 0xff - Source.a;
+		Destination.r = ((Source.r * Source.a) + (Destination.r * ia)) >> 8;
+		Destination.g = ((Source.g * Source.a) + (Destination.g * ia)) >> 8;
+		Destination.b = ((Source.b * Source.a) + (Destination.b * ia)) >> 8;
+		return Destination;
 }
 
 void RenderQuit() {
-  CloseWindow();
+		CloseWindow();
 }
 
 void InitializeRender(void) {
-  OpenWindow();
-  Background = ColorToNumber(mu_color(33, 33, 33, 255));
-  ProgramWindow = CreatedWindow;
+		OpenWindow();
+		Background = ColorToNumber(mu_color(33, 33, 33, 255));
+		ProgramWindow = CreatedWindow;
 }
 
 void FlushBuffers(void) {
-  for (uint32_t i = 0; i < BufferIndex; i++) {
-    mu_Rect *Source = &SourceBuffer[i];
-    mu_Rect *Texture = &TextureBuffer[i];
+		for (uint32_t i = 0; i < BufferIndex; i++) {
+				mu_Rect *Source = &SourceBuffer[i];
+				mu_Rect *Texture = &TextureBuffer[i];
 
-    uint16_t Y = mu_max(Source->y, Clip.y);
-    uint16_t X = mu_max(Source->x, Clip.x);
-    uint16_t Width = mu_min(Source->x + Source->w, Clip.x + Clip.w);
-    uint16_t Height = mu_min(Source->y + Source->h, Clip.y + Clip.h);
+				uint16_t Y = mu_max(Source->y, Clip.y);
+				uint16_t X = mu_max(Source->x, Clip.x);
+				uint16_t Width = mu_min(Source->x + Source->w, Clip.x + Clip.w);
+				uint16_t Height = mu_min(Source->y + Source->h, Clip.y + Clip.h);
 
-    uint32_t WindowArea = WINDOW_WIDTH * WINDOW_HEIGHT;
+				Height = mu_min(Height, WINDOW_HEIGHT);
+				Width  = mu_min(Width, WINDOW_WIDTH);
 
-    for (uint16_t CurrentY = Y; CurrentY < Height; CurrentY++) {
-      for (uint16_t CurrentX = X; CurrentX < Width; CurrentX++) {
-        uint32_t PixelLocation = CurrentY * WINDOW_WIDTH + CurrentX;
-        if (PixelLocation > WindowArea)
-          continue;
-
-        /* Textures */
-        if (Source->w == Texture->w && Source->h == Texture->h) {
-          uint8_t TextureAlpha = GetAtlasColor(Texture, CurrentX - Source->x, CurrentY - Source->y);
-          uint32_t CurrentPixel = SA_GetPixel(CurrentX, CurrentY);
-          mu_Color Color = {ColorBuffer[i].r, ColorBuffer[i].g, ColorBuffer[i].b, TextureAlpha};
-          SA_PutPixel(CurrentX, CurrentY, ColorToNumber(BlendPixel(NumberToColor(CurrentPixel), Color)));
-          /* Other */
-        } else {
-          mu_Color NewColor = BlendPixel(NumberToColor(SA_GetPixel(CurrentX, CurrentY)), ColorBuffer[i]);
-          SA_PutPixel(CurrentX, CurrentY, ColorToNumber(NewColor));
-        }
-
-      }
-    }
-  }
+				if (Source->w == Texture-> w && Source->h == Texture->h) {
+						/* Texture rendering */
+						for (uint16_t CurrentY = Y; CurrentY < Height; CurrentY++) {
+								for (uint16_t CurrentX = X; CurrentX < Width; CurrentX++) {
+										uint8_t TextureAlpha = GetAtlasColor(Texture, CurrentX - Source->x, CurrentY - Source->y);
+										uint32_t CurrentPixel = SA_GetPixel(CurrentX, CurrentY);
+										mu_Color Color = {ColorBuffer[i].r, ColorBuffer[i].g, ColorBuffer[i].b, TextureAlpha};
+										SA_PutPixel(CurrentX, CurrentY, ColorToNumber(BlendPixel(NumberToColor(CurrentPixel), Color)));
+								}
+						}
+				} else {
+						/* Rendering anything else */
+						for (uint16_t CurrentY = Y; CurrentY < Height; CurrentY++) {
+								for (uint16_t CurrentX = X; CurrentX < Width; CurrentX++) {
+										mu_Color NewColor = BlendPixel(NumberToColor(SA_GetPixel(CurrentX, CurrentY)), ColorBuffer[i]);
+										SA_PutPixel(CurrentX, CurrentY, ColorToNumber(NewColor));
+								}
+						}
+				}
+		}
 
   BufferIndex = 0;
 }
@@ -193,7 +193,7 @@ int RenderGetTextHeight(void) {
 
 void RenderClear(void) {
   FlushBuffers();
-  ClearWindow(Background);
+  SA_ClearWindow(Background);
 }
 
 void RenderPresent(void) {

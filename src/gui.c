@@ -78,7 +78,7 @@ void LowerString(char *Str) {
 
 void RefreshUI() {
   char *l_SearchBuffer = strdup(SearchBuffer);
-  uint32_t TotalCategoryAudios = 0;
+  //uint32_t TotalCategoryAudios = 0;
   LowerString(l_SearchBuffer);
 
   if (SA_TotalAudio > PlaylistBufferSizes) {
@@ -124,7 +124,7 @@ void RefreshUI() {
 
     PlaylistAudios[Audio[i].LayoutOrder] = Audio[i];
     PlaylistAudioIDs[Audio[i].LayoutOrder] = i;
-    TotalCategoryAudios++;
+    //TotalCategoryAudios++;
   }
 
   PlaylistBufferSizes = SA_TotalAudio;
